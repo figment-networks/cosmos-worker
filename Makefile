@@ -8,5 +8,6 @@ build:
 pack-release:
 	@mkdir -p ./release
 	@make build
+	@mv ./worker ./release/worker
 	@zip -r cosmos-worker ./release
 	@rm -rf ./release
