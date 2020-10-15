@@ -2,5 +2,12 @@ all: build
 
 .PHONY: build
 build:
-	go build -o worker-cosmos ./cmd/worker-cosmos
+	go build -o worker ./cmd/worker-cosmos
 
+.PHONY: pack-release
+pack-release:
+	@mkdir -p ./release
+	@make build
+	@mv ./worker ./release/worker
+	@zip -r cosmos-worker ./release
+	@rm -rf ./release
