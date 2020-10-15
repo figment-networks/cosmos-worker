@@ -50,6 +50,9 @@ func main() {
 		log.Fatalf("error initializing config [ERR: %v]", err.Error())
 	}
 
+	if cfg.RollbarServerRoot == "" {
+		cfg.RollbarServerRoot = "github.com/figment-networks/cosmos-worker"
+	}
 	rcfg := &logger.RollbarConfig{
 		AppEnv:             cfg.AppEnv,
 		RollbarAccessToken: cfg.RollbarAccessToken,
@@ -65,7 +68,6 @@ func main() {
 	}
 
 	logger.Info(config.IdentityString())
-
 	defer logger.Sync()
 
 	// Initialize metrics
