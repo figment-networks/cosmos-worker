@@ -20,7 +20,7 @@ build: LDFLAGS += -X $(MODULE)/cmd/worker-cosmos/config.Timestamp=$(shell date +
 build: LDFLAGS += -X $(MODULE)/cmd/worker-cosmos/config.Version=$(VERSION)
 build: LDFLAGS += -X $(MODULE)/cmd/worker-cosmos/config.GitSHA=$(GIT_SHA)
 build:
-	go build -o worker ./cmd/worker-cosmos
+	go build -o worker -ldflags '$(LDFLAGS)'  ./cmd/worker-cosmos
 
 .PHONY: pack-release
 pack-release:
