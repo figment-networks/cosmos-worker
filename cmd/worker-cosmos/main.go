@@ -49,11 +49,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("error initializing config [ERR: %v]", err.Error())
 	}
-	if cfg.AppEnv == "development" {
-		logger.Init("console", "debug", []string{"stderr"})
-	} else {
-		logger.Init("json", "info", []string{"stderr"})
+
+	rcfg := &logger.RollbarConfig{
+		AppEnv:             cfg.AppEnv,
+		RollbarAccessToken: cfg.RollbarAccessToken,
+		RollbarServerRoot:  cfg.RollbarServerRoot,
+		Version:            config.GitSHA,
+		ChainIDs:           []string{cfg.ChainID},
 	}
+
+	if cfg.AppEnv == "development" || cfg.AppEnv == "local" {
+		logger.Init("console", "debug", []string{"stderr"}, rcfg)
+	} else {
+		logger.Init("json", "info", []string{"stderr"}, rcfg)
+	}
+
+	logger.Info(config.IdentityString())
+
 	defer logger.Sync()
 
 	// Initialize metrics
