@@ -150,10 +150,12 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 		txErr := TxLogError{}
 		err := dec.Decode(&lf)
 		if err != nil {
+			dec = json.NewDecoder(readr)
 			// (lukanus): Try to fallback to known error format
 			readr.Reset(txRaw.TxResult.Log)
 			errin := dec.Decode(&txErr)
 			if errin != nil {
+				dec = json.NewDecoder(readr)
 				logger.Error("[COSMOS-API] Problem decoding raw transaction (json)", zap.Error(err), zap.String("content_log", txRaw.TxResult.Log), zap.Any("content", txRaw))
 				continue
 			}
