@@ -83,7 +83,7 @@ type ResultTxSearch struct {
 
 // GetTxSearchResponse cosmos response for search
 type GetTxSearchResponse struct {
-	ID     string         `json:"id"`
+	// ID     string         `json:"id"`
 	RPC    string         `json:"jsonrpc"`
 	Result ResultTxSearch `json:"result"`
 	Error  Error          `json:"error"`
@@ -91,7 +91,7 @@ type GetTxSearchResponse struct {
 
 // GetBlockResponse cosmos response from block
 type GetBlockResponse struct {
-	ID     string      `json:"id"`
+	// ID     string      `json:"id"`
 	RPC    string      `json:"jsonrpc"`
 	Result ResultBlock `json:"result"`
 	Error  Error       `json:"error"`
@@ -99,7 +99,7 @@ type GetBlockResponse struct {
 
 // GetBlockchainResponse cosmos response from blockchain
 type GetBlockchainResponse struct {
-	ID     string           `json:"id"`
+	//ID     string           `json:"id"`
 	RPC    string           `json:"jsonrpc"`
 	Result ResultBlockchain `json:"result"`
 	Error  Error            `json:"error"`

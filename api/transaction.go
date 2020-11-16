@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -173,13 +174,20 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 
 		outTX := cStruct.OutResp{Type: "Transaction"}
 		block := blocks[hInt]
-
 		trans := structs.Transaction{
 			Hash:      txRaw.Hash,
 			Memo:      tx.GetMemo(),
 			Time:      block.Time,
 			ChainID:   block.ChainID,
 			BlockHash: block.Hash,
+		}
+
+		for _, coin := range tx.Fee.Amount {
+			trans.Fee = append(trans.Fee, structs.TransactionAmount{
+				Text:     coin.Amount.String(),
+				Numeric:  coin.Amount.BigInt(),
+				Currency: coin.Denom,
+			})
 		}
 
 		trans.Height, err = strconv.ParseUint(txRaw.Height, 10, 64)
@@ -423,4 +431,23 @@ func getCoin(s string) (number *big.Int, exp int32, err error) {
 	}
 
 	return number, 0, errors.New("Impossible to parse ")
+}
+
+// GetFromRaw returns raw data for plugin use;
+func (c *Client) GetFromRaw(logger *zap.Logger, txReader io.Reader) []map[string]interface{} {
+	tx := &auth.StdTx{}
+	base64Dec := base64.NewDecoder(base64.StdEncoding, txReader)
+	_, err := c.cdc.UnmarshalBinaryLengthPrefixedReader(base64Dec, tx, 0)
+	if err != nil {
+		logger.Error("[COSMOS-API] Problem decoding raw transaction (cdc) ", zap.Error(err))
+	}
+	slice := []map[string]interface{}{}
+	for _, coin := range tx.Fee.Amount {
+		slice = append(slice, map[string]interface{}{
+			"text":     coin.Amount.String(),
+			"numeric":  coin.Amount.BigInt(),
+			"currency": coin.Denom,
+		})
+	}
+	return slice
 }

@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Builder Image
 # ------------------------------------------------------------------------------
-FROM golang:1.14 AS build
+FROM golang:1.15 AS build
 
 WORKDIR /go/src/github.com/figment-networks/cosmos-worker/
 

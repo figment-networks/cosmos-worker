@@ -15,6 +15,10 @@ endif
 
 all: build
 
+.PHONY: plugin
+plugin:
+	CGO_ENABLED="1" go build -trimpath -o converter-plugin.so -buildmode=plugin ./cmd/converter-plugin
+
 .PHONY: build
 build: LDFLAGS += -X $(MODULE)/cmd/worker-cosmos/config.Timestamp=$(shell date +%s)
 build: LDFLAGS += -X $(MODULE)/cmd/worker-cosmos/config.Version=$(VERSION)
