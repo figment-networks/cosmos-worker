@@ -124,7 +124,6 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightRange, blocks map
 	}
 
 	numberOfItemsTransactions.Observe(float64(totalCount))
-
 	c.logger.Debug("[COSMOS-API] Converting requests ", zap.Int("number", len(result.Result.Txs)), zap.Int("blocks", len(blocks)))
 	err = rawToTransaction(ctx, c, result.Result.Txs, blocks, out, c.logger, c.cdc)
 	if err != nil {
@@ -139,31 +138,34 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightRange, blocks map
 
 // transform raw data from cosmos into transaction format with augmentation from blocks
 func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks map[uint64]structs.Block, out chan cStruct.OutResp, logger *zap.Logger, cdc *codec.Codec) error {
-	readr := strings.NewReader("")
-	dec := json.NewDecoder(readr)
 	for _, txRaw := range in {
 		timer := metrics.NewTimer(transactionConversionDuration)
-
 		tx := &auth.StdTx{}
-
-		readr.Reset(txRaw.TxResult.Log)
 		lf := []LogFormat{}
-		txErr := TxLogError{}
-		err := dec.Decode(&lf)
-		if err != nil {
-			dec = json.NewDecoder(readr)
+		txErrs := []TxLogError{}
+
+		if err := json.Unmarshal([]byte(txRaw.TxResult.Log), &lf); err != nil {
 			// (lukanus): Try to fallback to known error format
-			readr.Reset(txRaw.TxResult.Log)
-			errin := dec.Decode(&txErr)
-			if errin != nil {
-				dec = json.NewDecoder(readr)
+			tle := TxLogError{}
+			if errin := json.Unmarshal([]byte(txRaw.TxResult.Log), &tle); errin != nil {
 				logger.Error("[COSMOS-API] Problem decoding raw transaction (json)", zap.Error(err), zap.String("content_log", txRaw.TxResult.Log), zap.Any("content", txRaw))
-				continue
+			}
+			if tle.Message != "" {
+				txErrs = append(txErrs, tle)
 			}
 		}
+
+		for _, logf := range lf {
+			tle := TxLogError{}
+			if errin := json.Unmarshal([]byte(logf.Log), &tle); errin == nil && tle.Message != "" {
+				txErrs = append(txErrs, tle)
+			}
+
+		}
+
 		txReader := strings.NewReader(txRaw.TxData)
 		base64Dec := base64.NewDecoder(base64.StdEncoding, txReader)
-		_, err = cdc.UnmarshalBinaryLengthPrefixedReader(base64Dec, tx, 0)
+		_, err := cdc.UnmarshalBinaryLengthPrefixedReader(base64Dec, tx, 0)
 		if err != nil {
 			logger.Error("[COSMOS-API] Problem decoding raw transaction (cdc) ", zap.Error(err))
 		}
@@ -180,6 +182,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			Time:      block.Time,
 			ChainID:   block.ChainID,
 			BlockHash: block.Hash,
+			RawLog:    []byte(txRaw.TxResult.Log),
 		}
 
 		for _, coin := range tx.Fee.Amount {
@@ -389,16 +392,17 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 
 		}
 
-		if txErr.Message != "" {
-			tev := structs.TransactionEvent{
-				Kind: "error",
-				Sub: []structs.SubsetEvent{{
-					Type:   []string{"error"},
-					Module: txErr.Codespace,
-					Error:  &structs.SubsetEventError{Message: txErr.Message},
-				}},
+		for _, txErr := range txErrs {
+			if txErr.Message != "" {
+				trans.Events = append(trans.Events, structs.TransactionEvent{
+					Kind: "error",
+					Sub: []structs.SubsetEvent{{
+						Type:   []string{"error"},
+						Module: txErr.Codespace,
+						Error:  &structs.SubsetEventError{Message: txErr.Message},
+					}},
+				})
 			}
-			trans.Events = append(trans.Events, tev)
 		}
 
 		outTX.Payload = trans
@@ -407,6 +411,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 
 		// GC Help
 		lf = nil
+
 	}
 
 	return nil
