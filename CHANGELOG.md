@@ -1,5 +1,16 @@
 # Change Log
 
+## [0.0.4] -
+
+### Added
+- Transaction objects are having log field filled with transaction log data
+- '/loglevel' endpoint for dynamically changing log level
+
+### Changed
+### Fixed
+- Errors from transaction logs are now as well populated
+
+
 ## [0.0.3] - 2020-11-17
 
 ### Added
