@@ -138,6 +138,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightRange, blocks map
 
 // transform raw data from cosmos into transaction format with augmentation from blocks
 func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks map[uint64]structs.Block, out chan cStruct.OutResp, logger *zap.Logger, cdc *codec.Codec) error {
+	defer logger.Sync()
 	for _, txRaw := range in {
 		timer := metrics.NewTimer(transactionConversionDuration)
 		tx := &auth.StdTx{}
@@ -167,7 +168,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 		base64Dec := base64.NewDecoder(base64.StdEncoding, txReader)
 		_, err := cdc.UnmarshalBinaryLengthPrefixedReader(base64Dec, tx, 0)
 		if err != nil {
-			logger.Error("[COSMOS-API] Problem decoding raw transaction (cdc) ", zap.Error(err))
+			logger.Error("[COSMOS-API] Problem decoding raw transaction (cdc)", zap.Error(err), zap.Any("height", txRaw.Height), zap.Any("raw_tx", txRaw))
 		}
 		hInt, err := strconv.ParseUint(txRaw.Height, 10, 64)
 		if err != nil {
@@ -380,16 +381,18 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 							am.Numeric.Set(c)
 							am.Exp = exp
 						}
+
+						if sub.Amount == nil {
+							sub.Amount = make(map[string]structs.TransactionAmount)
+						}
 						sub.Amount[strconv.Itoa(index)] = am
 					}
 					ev.Attributes[atk] = nil
 				}
 				tev.Sub = append(tev.Sub, sub)
-
 			}
 			logf.Events = nil
 			trans.Events = append(trans.Events, tev)
-
 		}
 
 		for _, txErr := range txErrs {

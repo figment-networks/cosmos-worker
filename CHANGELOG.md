@@ -1,6 +1,14 @@
 # Change Log
 
-## [0.0.4] -
+## [0.0.5] - 2020-12-02
+
+### Added
+### Changed
+### Fixed
+- Fallback in transactions on message type error
+- Dynamic log level switch
+
+## [0.0.4] - 2020-12-01
 
 ### Added
 - Transaction objects are having log field filled with transaction log data
