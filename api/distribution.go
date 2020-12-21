@@ -55,7 +55,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg) (se shared.SubsetE
 			"validator": {{ID: wdr.ValidatorAddress.String()}},
 		},
 		Recipient: []shared.EventTransfer{{
-			Account: shared.Account{ID: wdr.ValidatorAddress.String()},
+			Account: shared.Account{ID: wdr.DelegatorAddress.String()},
 		}},
 	}, nil
 }
