@@ -245,7 +245,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 				case "set_withdraw_address":
 					ev, err = mapDistributionSetWithdrawAddressToSub(msg)
 				case "withdraw_delegator_reward":
-					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg)
+					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg, lf[index]) // todo get logf for msgindex?
 				case "fund_community_pool":
 					ev, err = mapDistributionFundCommunityPoolToSub(msg)
 				default:

@@ -2,13 +2,18 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 
+	"github.com/figment-networks/indexer-manager/structs"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distribution "github.com/cosmos/cosmos-sdk/x/distribution"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
+
+var zero big.Int
 
 func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	wvc, ok := msg.(distribution.MsgWithdrawValidatorCommission)
@@ -42,12 +47,12 @@ func mapDistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent,
 	}, nil
 }
 
-func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, er error) {
 	wdr, ok := msg.(distribution.MsgWithdrawDelegatorReward)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
 	}
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"withdraw_delegator_reward"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
@@ -57,7 +62,46 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg) (se shared.SubsetE
 		Recipient: []shared.EventTransfer{{
 			Account: shared.Account{ID: wdr.DelegatorAddress.String()},
 		}},
-	}, nil
+	}
+
+	reward := structs.TransactionAmount{Numeric: &big.Int{}}
+	for _, ev := range logf.Events {
+		if ev.Type != "transfer" {
+			continue
+		}
+
+		for _, attr := range ev.Attributes {
+			for _, amount := range attr.Amount {
+				sliced := getCurrency(amount)
+				var (
+					c       *big.Int
+					exp     int32
+					coinErr error
+				)
+				if len(sliced) == 3 {
+					reward.Currency = sliced[2]
+					c, exp, coinErr = getCoin(sliced[1])
+				} else {
+					c, exp, coinErr = getCoin(amount)
+				}
+				if coinErr != nil {
+					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
+				}
+				reward.Text = amount
+				reward.Numeric.Set(c)
+				reward.Exp = exp
+			}
+		}
+	}
+
+	if reward.Numeric.Cmp(&zero) == 0 {
+		return se, nil
+	}
+	se.Amount = map[string]shared.TransactionAmount{
+		"reward": reward,
+	}
+
+	return se, nil
 }
 
 func mapDistributionFundCommunityPoolToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
