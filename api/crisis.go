@@ -4,22 +4,22 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	crisis "github.com/cosmos/cosmos-sdk/x/crisis"
+	crisis "github.com/cosmos/cosmos-sdk/x/crisis/types"
 )
 
-func mapCrisisVerifyInvariantToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
-	mvi, ok := msg.(crisis.MsgVerifyInvariant)
-	if !ok {
-		return se, errors.New("Not a verify_invariant type")
+func mapCrisisVerifyInvariantToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	mvi := &crisis.MsgVerifyInvariant{}
+	if err := proto.Unmarshal(msg, mvi); err != nil {
+		return se, errors.New("Not a crisis type" + err.Error())
 	}
 
 	return shared.SubsetEvent{
 		Type:   []string{"verify_invariant"},
 		Module: "crisis",
 		Sender: []shared.EventTransfer{{
-			Account: shared.Account{ID: mvi.Sender.String()},
+			Account: shared.Account{ID: mvi.Sender},
 		}},
 		Additional: map[string][]string{
 			"invariant_route":       {mvi.InvariantRoute},

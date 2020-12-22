@@ -4,23 +4,22 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	staking "github.com/cosmos/cosmos-sdk/x/staking"
+	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
-func mapStakingUndelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	u, ok := msg.(staking.MsgUndelegate)
-	if !ok {
-		return se, errors.New("Not a begin_unbonding type")
+func mapStakingUndelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	u := &staking.MsgUndelegate{}
+	if err := proto.Unmarshal(msg, u); err != nil {
+		return se, errors.New("Not a undelegate type" + err.Error())
 	}
-
 	return shared.SubsetEvent{
-		Type:   []string{"begin_unbonding"},
+		Type:   []string{"undelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: u.DelegatorAddress.String()}},
-			"validator": {{ID: u.ValidatorAddress.String()}},
+			"delegator": {{ID: u.DelegatorAddress}},
+			"validator": {{ID: u.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"undelegate": {
@@ -32,17 +31,18 @@ func mapStakingUndelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 	}, err
 }
 
-func mapStakingDelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	d, ok := msg.(staking.MsgDelegate)
-	if !ok {
-		return se, errors.New("Not a delegate type")
+func mapStakingDelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	d := &staking.MsgDelegate{}
+	if err := proto.Unmarshal(msg, d); err != nil {
+		return se, errors.New("Not a delegate type" + err.Error())
 	}
+
 	return shared.SubsetEvent{
 		Type:   []string{"delegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: d.DelegatorAddress.String()}},
-			"validator": {{ID: d.ValidatorAddress.String()}},
+			"delegator": {{ID: d.DelegatorAddress}},
+			"validator": {{ID: d.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -54,19 +54,19 @@ func mapStakingDelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 	}, err
 }
 
-func mapStakingBeginRedelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	br, ok := msg.(staking.MsgBeginRedelegate)
-	if !ok {
-		return se, errors.New("Not a begin_redelegate type")
+func mapStakingBeginRedelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	br := &staking.MsgBeginRedelegate{}
+	if err := proto.Unmarshal(msg, br); err != nil {
+		return se, errors.New("Not a begin_redelegate type" + err.Error())
 	}
 
 	return shared.SubsetEvent{
 		Type:   []string{"begin_redelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator":             {{ID: br.DelegatorAddress.String()}},
-			"validator_destination": {{ID: br.ValidatorDstAddress.String()}},
-			"validator_source":      {{ID: br.ValidatorDstAddress.String()}},
+			"delegator":             {{ID: br.DelegatorAddress}},
+			"validator_destination": {{ID: br.ValidatorDstAddress}},
+			"validator_source":      {{ID: br.ValidatorDstAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -78,19 +78,19 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err err
 	}, err
 }
 
-func mapStakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgCreateValidator)
-	if !ok {
-		return se, errors.New("Not a create_validator type")
+func mapStakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgCreateValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, errors.New("Not a create_validator type" + err.Error())
 	}
 	return shared.SubsetEvent{
 		Type:   []string{"create_validator"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: ev.DelegatorAddress.String()}},
+			"delegator": {{ID: ev.DelegatorAddress}},
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -112,23 +112,23 @@ func mapStakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err err
 			},
 			"commission_rate": {
 				Text:    ev.Commission.Rate.String(),
-				Numeric: ev.Commission.Rate.Int,
+				Numeric: ev.Commission.Rate.BigInt(),
 			},
 			"commission_max_rate": {
 				Text:    ev.Commission.MaxRate.String(),
-				Numeric: ev.Commission.MaxRate.Int,
+				Numeric: ev.Commission.MaxRate.BigInt(),
 			},
 			"commission_max_change_rate": {
 				Text:    ev.Commission.MaxChangeRate.String(),
-				Numeric: ev.Commission.MaxChangeRate.Int,
+				Numeric: ev.Commission.MaxChangeRate.BigInt(),
 			}},
 	}, err
 }
 
-func mapStakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgEditValidator)
-	if !ok {
-		return se, errors.New("Not a edit_validator type")
+func mapStakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgEditValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, errors.New("Not a edit_validator type" + err.Error())
 	}
 	sev := shared.SubsetEvent{
 		Type:   []string{"edit_validator"},
@@ -136,7 +136,7 @@ func mapStakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error
 		Node: map[string][]shared.Account{
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -160,7 +160,7 @@ func mapStakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error
 		if ev.CommissionRate != nil {
 			sev.Amount["commission_rate"] = shared.TransactionAmount{
 				Text:    ev.CommissionRate.String(),
-				Numeric: ev.CommissionRate.Int,
+				Numeric: ev.CommissionRate.BigInt(),
 			}
 		}
 	}

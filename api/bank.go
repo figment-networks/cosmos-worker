@@ -4,16 +4,17 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	bank "github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
-func mapBankMultisendToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapBankMultisendToSub(msg []byte) (se shared.SubsetEvent, er error) {
 
-	multisend, ok := msg.(bank.MsgMultiSend)
-	if !ok {
-		return se, errors.New("Not a multisend type")
+	multisend := &bank.MsgMultiSend{}
+	if err := proto.Unmarshal(msg, multisend); err != nil {
+		return se, errors.New("Not a multisend type" + err.Error())
 	}
 
 	se = shared.SubsetEvent{
@@ -39,11 +40,11 @@ func mapBankMultisendToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	return se, nil
 }
 
-func mapBankSendToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapBankSendToSub(msg []byte) (se shared.SubsetEvent, er error) {
 
-	send, ok := msg.(bank.MsgSend)
-	if !ok {
-		return se, errors.New("Not a send type")
+	send := &bank.MsgSend{}
+	if err := proto.Unmarshal(msg, send); err != nil {
+		return se, errors.New("Not a send type" + err.Error())
 	}
 
 	se = shared.SubsetEvent{
@@ -60,10 +61,10 @@ func mapBankSendToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	return se, nil
 }
 
-func bankProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {
+func bankProduceEvTx(account string, coins types.Coins) (evt shared.EventTransfer, err error) {
 
 	evt = shared.EventTransfer{
-		Account: shared.Account{ID: account.String()},
+		Account: shared.Account{ID: account},
 	}
 	if len(coins) > 0 {
 		evt.Amounts = []shared.TransactionAmount{}
