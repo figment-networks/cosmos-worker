@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/figment-networks/indexer-manager/structs"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -64,7 +63,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}},
 	}
 
-	reward := structs.TransactionAmount{Numeric: &big.Int{}}
+	reward := shared.TransactionAmount{Numeric: &big.Int{}}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
 			continue

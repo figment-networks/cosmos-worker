@@ -2,6 +2,8 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -9,13 +11,15 @@ import (
 	staking "github.com/cosmos/cosmos-sdk/x/staking"
 )
 
-func mapStakingUndelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
+const unbondedTokensPoolAddr = "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r"
+
+func mapStakingUndelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	u, ok := msg.(staking.MsgUndelegate)
 	if !ok {
 		return se, errors.New("Not a begin_unbonding type")
 	}
 
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"begin_unbonding"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
@@ -29,15 +33,59 @@ func mapStakingUndelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 				Text:     u.Amount.String(),
 			},
 		},
-	}, err
+	}
+
+	reward := shared.TransactionAmount{Numeric: &big.Int{}}
+	for _, ev := range logf.Events {
+		if ev.Type != "transfer" {
+			continue
+		}
+
+		var latestRecipient string
+		for _, attr := range ev.Attributes {
+			if len(attr.Recipient) > 0 {
+				latestRecipient = attr.Recipient[0]
+			}
+			if latestRecipient == unbondedTokensPoolAddr {
+				continue
+			}
+			for _, amount := range attr.Amount {
+				sliced := getCurrency(amount)
+				var (
+					c       *big.Int
+					exp     int32
+					coinErr error
+				)
+				if len(sliced) == 3 {
+					reward.Currency = sliced[2]
+					c, exp, coinErr = getCoin(sliced[1])
+				} else {
+					c, exp, coinErr = getCoin(amount)
+				}
+				if coinErr != nil {
+					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
+				}
+				reward.Text = amount
+				reward.Numeric.Set(c)
+				reward.Exp = exp
+			}
+		}
+	}
+
+	if reward.Numeric.Cmp(&zero) == 0 {
+		return se, nil
+	}
+	se.Amount["reward"] = reward
+
+	return se, nil
 }
 
-func mapStakingDelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
+func mapStakingDelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	d, ok := msg.(staking.MsgDelegate)
 	if !ok {
 		return se, errors.New("Not a delegate type")
 	}
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"delegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
@@ -51,16 +99,54 @@ func mapStakingDelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 				Text:     d.Amount.String(),
 			},
 		},
-	}, err
+	}
+
+	reward := shared.TransactionAmount{Numeric: &big.Int{}}
+	for _, ev := range logf.Events {
+		if ev.Type != "transfer" {
+			continue
+		}
+
+		for _, attr := range ev.Attributes {
+			for _, amount := range attr.Amount {
+				sliced := getCurrency(amount)
+				var (
+					c       *big.Int
+					exp     int32
+					coinErr error
+				)
+				if len(sliced) == 3 {
+					reward.Currency = sliced[2]
+					c, exp, coinErr = getCoin(sliced[1])
+				} else {
+					c, exp, coinErr = getCoin(amount)
+				}
+				if coinErr != nil {
+					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
+				}
+
+				reward.Text = amount
+				reward.Exp = exp
+				reward.Numeric.Set(c)
+			}
+		}
+	}
+
+	if reward.Numeric.Cmp(&zero) == 0 {
+		return se, nil
+	}
+	se.Amount["reward"] = reward
+
+	return se, nil
 }
 
-func mapStakingBeginRedelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
+func mapStakingBeginRedelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	br, ok := msg.(staking.MsgBeginRedelegate)
 	if !ok {
 		return se, errors.New("Not a begin_redelegate type")
 	}
 
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"begin_redelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
@@ -75,7 +161,47 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg) (se shared.SubsetEvent, err err
 				Text:     br.Amount.String(),
 			},
 		},
-	}, err
+	}
+
+	reward := shared.TransactionAmount{Numeric: &big.Int{}}
+	rewardText := []string{}
+	for _, ev := range logf.Events {
+		if ev.Type != "transfer" {
+			continue
+		}
+
+		for _, attr := range ev.Attributes {
+			for _, amount := range attr.Amount {
+				sliced := getCurrency(amount)
+				var (
+					c       *big.Int
+					exp     int32
+					coinErr error
+				)
+				if len(sliced) == 3 {
+					reward.Currency = sliced[2]
+					c, exp, coinErr = getCoin(sliced[1])
+				} else {
+					c, exp, coinErr = getCoin(amount)
+				}
+				if coinErr != nil {
+					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
+				}
+
+				rewardText = append(rewardText, amount)
+				reward.Exp = exp
+				reward.Numeric.Add(reward.Numeric, c)
+			}
+		}
+	}
+
+	if reward.Numeric.Cmp(&zero) == 0 {
+		return se, nil
+	}
+	reward.Text = fmt.Sprintf("%v", rewardText)
+	se.Amount["reward"] = reward
+
+	return se, nil
 }
 
 func mapStakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
