@@ -6,10 +6,10 @@ import (
 
 	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	distribution "github.com/cosmos/cosmos-sdk/x/distribution"
-	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/cosmos/cosmos-sdk/types"
+	distribution "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
 var zero big.Int
@@ -24,9 +24,9 @@ func DistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf types.LogFor
 	se = shared.SubsetEvent{
 		Type:   []string{"withdraw_validator_commission"},
 		Module: "distribution",
-		Node:   map[string][]shared.Account{"validator": {{ID: wvc.ValidatorAddress.String()}}},
+		Node:   map[string][]shared.Account{"validator": {{ID: wvc.ValidatorAddress}}},
 		Recipient: []shared.EventTransfer{{
-			Account: shared.Account{ID: wvc.ValidatorAddress.String()},
+			Account: shared.Account{ID: wvc.ValidatorAddress},
 		}},
 	}
 
@@ -45,8 +45,8 @@ func DistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent, er
 		Type:   []string{"set_withdraw_address"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: swa.DelegatorAddress.String()}},
-			"withdraw":  {{ID: swa.WithdrawAddress.String()}},
+			"delegator": {{ID: swa.DelegatorAddress}},
+			"withdraw":  {{ID: swa.WithdrawAddress}},
 		},
 	}, nil
 }
@@ -61,8 +61,8 @@ func DistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf types.LogFormat)
 		Type:   []string{"withdraw_delegator_reward"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: wdr.DelegatorAddress.String()}},
-			"validator": {{ID: wdr.ValidatorAddress.String()}},
+			"delegator": {{ID: wdr.DelegatorAddress}},
+			"validator": {{ID: wdr.ValidatorAddress}},
 		},
 		Recipient: []shared.EventTransfer{{
 			Account: shared.Account{ID: wdr.DelegatorAddress.String()},
@@ -85,7 +85,7 @@ func DistributionFundCommunityPoolToSub(msg sdk.Msg, logf types.LogFormat) (se s
 		Type:   []string{"fund_community_pool"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"depositor": {{ID: fcp.Depositor.String()}},
+			"depositor": {{ID: fcp.Depositor}},
 		},
 		Sender: []shared.EventTransfer{evt},
 	}
@@ -93,10 +93,10 @@ func DistributionFundCommunityPoolToSub(msg sdk.Msg, logf types.LogFormat) (se s
 	return se, err
 }
 
-func distributionProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {
+func distributionProduceEvTx(account string, coins types.Coins) (evt shared.EventTransfer, err error) {
 
 	evt = shared.EventTransfer{
-		Account: shared.Account{ID: account.String()},
+		Account: shared.Account{ID: account},
 	}
 	if len(coins) > 0 {
 		evt.Amounts = []shared.TransactionAmount{}

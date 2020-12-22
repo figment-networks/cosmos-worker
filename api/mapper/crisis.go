@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	crisis "github.com/cosmos/cosmos-sdk/x/crisis"
+	crisis "github.com/cosmos/cosmos-sdk/x/crisis/types"
 )
 
 // CrisisVerifyInvariantToSub transforms crisis.MsgVerifyInvariant sdk messages to SubsetEvent
@@ -20,7 +20,7 @@ func CrisisVerifyInvariantToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 		Type:   []string{"verify_invariant"},
 		Module: "crisis",
 		Sender: []shared.EventTransfer{{
-			Account: shared.Account{ID: mvi.Sender.String()},
+			Account: shared.Account{ID: mvi.Sender},
 		}},
 		Additional: map[string][]string{
 			"invariant_route":       {mvi.InvariantRoute},

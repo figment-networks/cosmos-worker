@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/figment-networks/cosmos-worker/api/mapper"
 	"github.com/figment-networks/cosmos-worker/api/types"
@@ -33,6 +32,205 @@ type TxLogError struct {
 	Message   string  `json:"message"`
 }
 
+// SearchTx is making search api call
+func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block structs.Block /*out chan cStruct.OutResp, page, perPage int */) (txs []structs.Transaction, err error) {
+
+	grpcRes, err := c.txServiceClient.GetTxsEvent(ctx, &tx.GetTxsEventRequest{
+		Events: []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
+		/*Pagination: &query.PageRequest{
+			CountTotal: true,
+			Offset:     0,
+			Limit:      30,
+		},*/
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for i, trans := range grpcRes.Txs {
+		resp := grpcRes.TxResponses[i]
+		tx, err := rawToTransaction(ctx, trans, resp, c.logger)
+		if err != nil {
+			return nil, err
+		}
+		tx.BlockHash = block.Hash
+		tx.ChainID = block.ChainID
+
+		txs = append(txs, tx)
+	}
+
+	return txs, nil
+}
+
+// transform raw data from cosmos into transaction format with augmentation from blocks
+func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, logger *zap.Logger) (trans structs.Transaction, err error) {
+
+	trans = structs.Transaction{
+		Memo:      in.Body.Memo,
+		Height:    uint64(resp.Height),
+		Hash:      resp.TxHash,
+		GasWanted: uint64(resp.GasWanted),
+		GasUsed:   uint64(resp.GasUsed),
+	}
+
+	for index, m := range in.Body.Messages {
+		// tPath is "/cosmos.bank.v1beta1.MsgSend"
+		tPath := strings.Split(m.TypeUrl, ".")
+
+		if len(tPath) != 4 {
+			return trans, errors.New("TypeURL is in wrong format")
+		}
+
+		if tPath[0] != "/cosmos" {
+			return trans, errors.New("TypeURL is not cosmos type")
+		}
+
+		tev := structs.TransactionEvent{
+			ID: strconv.Itoa(index),
+		}
+
+		var ev structs.SubsetEvent
+		var err error
+
+		switch tPath[1] {
+		case "bank":
+			switch tPath[3] {
+			case "MsgSend":
+				ev, err = mapBankSendToSub(m.Value)
+			case "MsgMultiSend":
+				ev, err = mapBankMultisendToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "crisis":
+			switch tPath[3] {
+			case "MsgVerifyInvariant":
+				ev, err = mapCrisisVerifyInvariantToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "distribution":
+			switch tPath[3] {
+			case "MsgWithdrawValidatorCommission":
+				ev, err = mapDistributionWithdrawValidatorCommissionToSub(m.Value)
+			case "MsgSetWithdrawAddress":
+				ev, err = mapDistributionSetWithdrawAddressToSub(m.Value)
+			case "MsgWithdrawDelegatorReward":
+				ev, err = mapDistributionWithdrawDelegatorRewardToSub(m.Value)
+			case "MsgFundCommunityPool":
+				ev, err = mapDistributionFundCommunityPoolToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "evidence":
+			switch tPath[3] {
+			case "MsgSubmitEvidence":
+				ev, err = mapEvidenceSubmitEvidenceToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "gov":
+			switch tPath[3] {
+			case "MsgDeposit":
+				ev, err = mapGovDepositToSub(m.Value)
+			case "MsgVote":
+				ev, err = mapGovVoteToSub(m.Value)
+			case "MsgSubmitProposal":
+				ev, err = mapGovSubmitProposalToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "slashing":
+			switch tPath[3] {
+			case "MsgUnjail":
+				ev, err = mapSlashingUnjailToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		case "staking":
+			switch tPath[3] {
+			case "MsgUndelegate":
+				ev, err = mapStakingUndelegateToSub(m.Value)
+			case "MsgEditValidator":
+				ev, err = mapStakingEditValidatorToSub(m.Value)
+			case "MsgCreateValidator":
+				ev, err = mapStakingCreateValidatorToSub(m.Value)
+			case "MsgDelegate":
+				ev, err = mapStakingDelegateToSub(m.Value)
+			case "MsgBeginRedelegate":
+				ev, err = mapStakingBeginRedelegateToSub(m.Value)
+			default:
+				logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+			}
+		default:
+			logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", tPath[3]), zap.String("type", m.TypeUrl))
+		}
+
+		if len(ev.Type) > 0 {
+			tev.Kind = tPath[3]
+			tev.Sub = append(tev.Sub, ev)
+		}
+
+		if err != nil {
+			logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+		}
+
+		//presentIndexes[tev.ID] = true
+		trans.Events = append(trans.Events, tev)
+	}
+
+	/*
+		block := blocks[hInt]
+			trans := structs.Transaction{
+				Hash:      txRaw.Hash,
+				Memo:      tx.GetMemo(),
+				Time:      block.Time,
+				ChainID:   block.ChainID,
+				BlockHash: block.Hash,
+				RawLog:    []byte(txRaw.TxResult.Log),
+			}
+
+			for _, coin := range tx.Fee.Amount {
+				trans.Fee = append(trans.Fee, structs.TransactionAmount{
+					Text:     coin.Amount.String(),
+					Numeric:  coin.Amount.BigInt(),
+					Currency: coin.Denom,
+				})
+			}
+
+			trans.Height, err = strconv.ParseUint(txRaw.Height, 10, 64)
+			if err != nil {
+				outTX.Error = err
+			}
+			trans.GasWanted, err = strconv.ParseUint(txRaw.TxResult.GasWanted, 10, 64)
+			if err != nil {
+				outTX.Error = err
+			}
+			trans.GasUsed, err = strconv.ParseUint(txRaw.TxResult.GasUsed, 10, 64)
+			if err != nil {
+				outTX.Error = err
+			}
+
+
+	*/
+	return trans, nil
+}
+
+/*
+	grpcRes, err := c.txServiceClient.GetTxsEvent(
+		ctx,
+		&tx.GetTxsEventRequest{
+			Events: []string{"height=200"},
+			//Events: []string{"message.height=200"},
+			Pagination: &query.PageRequest{
+				CountTotal: true,
+				Offset:     page,
+				Limit:      perPage,
+			},
+		},
+	)*/
+
+/*
 // SearchTx is making search api call
 func (c *Client) SearchTx(ctx context.Context, r structs.HeightRange, blocks map[uint64]structs.Block, out chan cStruct.OutResp, page, perPage int, fin chan string) {
 	defer c.logger.Sync()

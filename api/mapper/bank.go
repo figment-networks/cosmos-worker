@@ -5,9 +5,10 @@ import (
 
 	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	bank "github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 // BankMultisendToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
@@ -63,10 +64,10 @@ func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, er
 	return se, err
 }
 
-func bankProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {
+func bankProduceEvTx(account string, coins types.Coins) (evt shared.EventTransfer, err error) {
 
 	evt = shared.EventTransfer{
-		Account: shared.Account{ID: account.String()},
+		Account: shared.Account{ID: account},
 	}
 	if len(coins) > 0 {
 		evt.Amounts = []shared.TransactionAmount{}

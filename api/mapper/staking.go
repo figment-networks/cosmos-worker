@@ -8,9 +8,9 @@ import (
 	"github.com/figment-networks/cosmos-worker/api/types"
 	"github.com/figment-networks/cosmos-worker/api/util"
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	staking "github.com/cosmos/cosmos-sdk/x/staking"
+	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 const unbondedTokensPoolAddr = "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r"
@@ -26,8 +26,8 @@ func StakingUndelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.Subset
 		Type:   []string{"begin_unbonding"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: u.DelegatorAddress.String()}},
-			"validator": {{ID: u.ValidatorAddress.String()}},
+			"delegator": {{ID: u.DelegatorAddress}},
+			"validator": {{ID: u.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"undelegate": {
@@ -105,8 +105,8 @@ func StakingDelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEv
 		Type:   []string{"delegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: d.DelegatorAddress.String()}},
-			"validator": {{ID: d.ValidatorAddress.String()}},
+			"delegator": {{ID: d.DelegatorAddress}},
+			"validator": {{ID: d.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -159,10 +159,10 @@ func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error)
 		Type:   []string{"create_validator"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: ev.DelegatorAddress.String()}},
+			"delegator": {{ID: ev.DelegatorAddress}},
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -184,15 +184,15 @@ func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error)
 			},
 			"commission_rate": {
 				Text:    ev.Commission.Rate.String(),
-				Numeric: ev.Commission.Rate.Int,
+				Numeric: ev.Commission.Rate.BigInt(),
 			},
 			"commission_max_rate": {
 				Text:    ev.Commission.MaxRate.String(),
-				Numeric: ev.Commission.MaxRate.Int,
+				Numeric: ev.Commission.MaxRate.BigInt(),
 			},
 			"commission_max_change_rate": {
 				Text:    ev.Commission.MaxChangeRate.String(),
-				Numeric: ev.Commission.MaxChangeRate.Int,
+				Numeric: ev.Commission.MaxChangeRate.BigInt(),
 			}},
 	}, err
 }
@@ -209,7 +209,7 @@ func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 		Node: map[string][]shared.Account{
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -233,7 +233,7 @@ func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 		if ev.CommissionRate != nil {
 			sev.Amount["commission_rate"] = shared.TransactionAmount{
 				Text:    ev.CommissionRate.String(),
-				Numeric: ev.CommissionRate.Int,
+				Numeric: ev.CommissionRate.BigInt(),
 			}
 		}
 	}

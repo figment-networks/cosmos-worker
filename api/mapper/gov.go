@@ -6,9 +6,9 @@ import (
 
 	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
+	"github.com/gogo/protobuf/proto"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	gov "github.com/cosmos/cosmos-sdk/x/gov"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
 )
 
 // GovDepositToSub transforms gov.MsgDeposit sdk messages to SubsetEvent
@@ -21,11 +21,11 @@ func GovDepositToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, 
 	se = shared.SubsetEvent{
 		Type:       []string{"deposit"},
 		Module:     "gov",
-		Node:       map[string][]shared.Account{"depositor": {{ID: dep.Depositor.String()}}},
-		Additional: map[string][]string{"proposalID": {strconv.FormatUint(dep.ProposalID, 10)}},
+		Node:       map[string][]shared.Account{"depositor": {{ID: dep.Depositor}}},
+		Additional: map[string][]string{"proposalID": {strconv.FormatUint(dep.ProposalId, 10)}},
 	}
 
-	sender := shared.EventTransfer{Account: shared.Account{ID: dep.Depositor.String()}}
+	sender := shared.EventTransfer{Account: shared.Account{ID: dep.Depositor}}
 	txAmount := map[string]shared.TransactionAmount{}
 
 	for i, coin := range dep.Amount {
@@ -61,9 +61,9 @@ func GovVoteToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	return shared.SubsetEvent{
 		Type:   []string{"vote"},
 		Module: "gov",
-		Node:   map[string][]shared.Account{"voter": {{ID: vote.Voter.String()}}},
+		Node:   map[string][]shared.Account{"voter": {{ID: vote.Voter}}},
 		Additional: map[string][]string{
-			"proposalID": {strconv.FormatUint(vote.ProposalID, 10)},
+			"proposalID": {strconv.FormatUint(vote.ProposalId, 10)},
 			"option":     {vote.Option.String()},
 		},
 	}, nil
@@ -79,10 +79,10 @@ func GovSubmitProposalToSub(msg sdk.Msg, logf types.LogFormat) (se shared.Subset
 	se = shared.SubsetEvent{
 		Type:   []string{"submit_proposal"},
 		Module: "gov",
-		Node:   map[string][]shared.Account{"proposer": {{ID: sp.Proposer.String()}}},
+		Node:   map[string][]shared.Account{"proposer": {{ID: sp.Proposer}}},
 	}
 
-	sender := shared.EventTransfer{Account: shared.Account{ID: sp.Proposer.String()}}
+	sender := shared.EventTransfer{Account: shared.Account{ID: sp.Proposer}}
 	txAmount := map[string]shared.TransactionAmount{}
 
 	for i, coin := range sp.InitialDeposit {
