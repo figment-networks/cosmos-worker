@@ -63,7 +63,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}},
 	}
 
-	reward := shared.TransactionAmount{Numeric: &big.Int{}}
+	rewards := []shared.TransactionAmount{}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
 			continue
@@ -71,6 +71,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 
 		for _, attr := range ev.Attributes {
 			for _, amount := range attr.Amount {
+				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
 				sliced := getCurrency(amount)
 				var (
 					c       *big.Int
@@ -78,7 +79,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 					coinErr error
 				)
 				if len(sliced) == 3 {
-					reward.Currency = sliced[2]
+					attrAmt.Currency = sliced[2]
 					c, exp, coinErr = getCoin(sliced[1])
 				} else {
 					c, exp, coinErr = getCoin(amount)
@@ -86,18 +87,21 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 				if coinErr != nil {
 					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
 				}
-				reward.Text = amount
-				reward.Numeric.Set(c)
-				reward.Exp = exp
+				attrAmt.Text = amount
+				attrAmt.Numeric.Set(c)
+				attrAmt.Exp = exp
+				if attrAmt.Numeric.Cmp(&zero) != 0 {
+					rewards = append(rewards, attrAmt)
+				}
 			}
 		}
 	}
 
-	if reward.Numeric.Cmp(&zero) == 0 {
+	if len(rewards) == 0 {
 		return se, nil
 	}
-	se.Amount = map[string]shared.TransactionAmount{
-		"reward": reward,
+	se.Transfers = map[string][]shared.EventTransfer{
+		"reward": []shared.EventTransfer{{Amounts: rewards}},
 	}
 
 	return se, nil
