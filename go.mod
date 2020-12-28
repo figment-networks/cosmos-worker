@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/bearcherian/rollzap v1.0.2
 	github.com/cosmos/cosmos-sdk v0.39.2
-	github.com/figment-networks/indexer-manager v0.0.6
+	github.com/figment-networks/indexer-manager v0.0.8
 	github.com/figment-networks/indexing-engine v0.1.14
 	github.com/google/uuid v1.1.2
 	github.com/kelseyhightower/envconfig v1.4.0

@@ -245,7 +245,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 				case "set_withdraw_address":
 					ev, err = mapDistributionSetWithdrawAddressToSub(msg)
 				case "withdraw_delegator_reward":
-					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg)
+					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg, findLog(lf, index))
 				case "fund_community_pool":
 					ev, err = mapDistributionFundCommunityPoolToSub(msg)
 				default:
@@ -279,15 +279,15 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			case "staking":
 				switch msg.Type() {
 				case "begin_unbonding":
-					ev, err = mapStakingUndelegateToSub(msg)
+					ev, err = mapStakingUndelegateToSub(msg, findLog(lf, index))
 				case "edit_validator":
 					ev, err = mapStakingEditValidatorToSub(msg)
 				case "create_validator":
 					ev, err = mapStakingCreateValidatorToSub(msg)
 				case "delegate":
-					ev, err = mapStakingDelegateToSub(msg)
+					ev, err = mapStakingDelegateToSub(msg, findLog(lf, index))
 				case "begin_redelegate":
-					ev, err = mapStakingBeginRedelegateToSub(msg)
+					ev, err = mapStakingBeginRedelegateToSub(msg, findLog(lf, index))
 				default:
 					c.logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -458,4 +458,19 @@ func (c *Client) GetFromRaw(logger *zap.Logger, txReader io.Reader) []map[string
 		})
 	}
 	return slice
+}
+
+func findLog(lf []LogFormat, index int) LogFormat {
+	if len(lf) < index {
+		return LogFormat{}
+	}
+	if l := lf[index]; l.MsgIndex == float64(index) {
+		return l
+	}
+	for _, l := range lf {
+		if l.MsgIndex == float64(index) {
+			return l
+		}
+	}
+	return LogFormat{}
 }
