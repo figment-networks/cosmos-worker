@@ -28,7 +28,7 @@ func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf LogFormat
 		}},
 	}
 
-	err = produceTransfers(&se, "reward", logf)
+	err = produceTransfers(&se, "send", logf)
 	return se, err
 }
 
@@ -69,7 +69,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 	return se, err
 }
 
-func mapDistributionFundCommunityPoolToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapDistributionFundCommunityPoolToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, er error) {
 
 	fcp, ok := msg.(distributiontypes.MsgFundCommunityPool)
 	if !ok {
@@ -77,15 +77,16 @@ func mapDistributionFundCommunityPoolToSub(msg sdk.Msg) (se shared.SubsetEvent, 
 	}
 
 	evt, err := distributionProduceEvTx(fcp.Depositor, fcp.Amount)
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"fund_community_pool"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
 			"depositor": {{ID: fcp.Depositor.String()}},
 		},
 		Sender: []shared.EventTransfer{evt},
-	}, err
-
+	}
+	err = produceTransfers(&se, "reward", logf)
+	return se, err
 }
 
 func distributionProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {

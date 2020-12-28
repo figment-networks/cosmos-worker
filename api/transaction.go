@@ -248,7 +248,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 				case "withdraw_delegator_reward":
 					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg, logAtIndex)
 				case "fund_community_pool":
-					ev, err = mapDistributionFundCommunityPoolToSub(msg)
+					ev, err = mapDistributionFundCommunityPoolToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -262,7 +262,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			case "gov":
 				switch msg.Type() {
 				case "deposit":
-					ev, err = mapGovDepositToSub(msg)
+					ev, err = mapGovDepositToSub(msg, logAtIndex)
 				case "vote":
 					ev, err = mapGovVoteToSub(msg)
 				case "submit_proposal":

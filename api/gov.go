@@ -10,13 +10,13 @@ import (
 	gov "github.com/cosmos/cosmos-sdk/x/gov"
 )
 
-func mapGovDepositToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapGovDepositToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	dep, ok := msg.(gov.MsgDeposit)
 	if !ok {
 		return se, errors.New("Not a deposit type")
 	}
 
-	evt := shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:       []string{"deposit"},
 		Module:     "gov",
 		Node:       map[string][]shared.Account{"depositor": {{ID: dep.Depositor.String()}}},
@@ -42,10 +42,11 @@ func mapGovDepositToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 		txAmount[key] = am
 	}
 
-	evt.Sender = []shared.EventTransfer{sender}
-	evt.Amount = txAmount
+	se.Sender = []shared.EventTransfer{sender}
+	se.Amount = txAmount
 
-	return evt, nil
+	err = produceTransfers(&se, "send", logf)
+	return se, err
 }
 
 func mapGovVoteToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
