@@ -63,6 +63,7 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}},
 	}
 
+	var withdrawAddr string
 	rewards := []shared.TransactionAmount{}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
@@ -70,6 +71,10 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}
 
 		for _, attr := range ev.Attributes {
+			if len(attr.Recipient) > 0 {
+				withdrawAddr = attr.Recipient[0]
+			}
+
 			for _, amount := range attr.Amount {
 				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
 				sliced := getCurrency(amount)
@@ -101,7 +106,10 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		return se, nil
 	}
 	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{Amounts: rewards}},
+		"reward": []shared.EventTransfer{{
+			Amounts: rewards,
+			Account: shared.Account{ID: withdrawAddr},
+		}},
 	}
 
 	return se, nil

@@ -35,6 +35,7 @@ func mapStakingUndelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEve
 		},
 	}
 
+	var withdrawAddr string
 	rewards := []shared.TransactionAmount{}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
@@ -49,6 +50,7 @@ func mapStakingUndelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEve
 			if latestRecipient == unbondedTokensPoolAddr {
 				continue
 			}
+			withdrawAddr = latestRecipient
 
 			for _, amount := range attr.Amount {
 				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
@@ -81,7 +83,10 @@ func mapStakingUndelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEve
 		return se, nil
 	}
 	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{Amounts: rewards}},
+		"reward": []shared.EventTransfer{{
+			Amounts: rewards,
+			Account: shared.Account{ID: withdrawAddr},
+		}},
 	}
 
 	return se, nil
@@ -108,6 +113,7 @@ func mapStakingDelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent
 		},
 	}
 
+	var withdrawAddr string
 	rewards := []shared.TransactionAmount{}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
@@ -115,6 +121,10 @@ func mapStakingDelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent
 		}
 
 		for _, attr := range ev.Attributes {
+			if len(attr.Recipient) > 0 {
+				withdrawAddr = attr.Recipient[0]
+			}
+
 			for _, amount := range attr.Amount {
 				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
 				sliced := getCurrency(amount)
@@ -147,7 +157,10 @@ func mapStakingDelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent
 		return se, nil
 	}
 	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{Amounts: rewards}},
+		"reward": []shared.EventTransfer{{
+			Amounts: rewards,
+			Account: shared.Account{ID: withdrawAddr},
+		}},
 	}
 	return se, nil
 }
@@ -175,6 +188,7 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.Subs
 		},
 	}
 
+	var withdrawAddr string
 	rewards := []shared.TransactionAmount{}
 	for _, ev := range logf.Events {
 		if ev.Type != "transfer" {
@@ -182,6 +196,9 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.Subs
 		}
 
 		for _, attr := range ev.Attributes {
+			if len(attr.Recipient) > 0 {
+				withdrawAddr = attr.Recipient[0]
+			}
 			for _, amount := range attr.Amount {
 				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
 				sliced := getCurrency(amount)
@@ -214,7 +231,10 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.Subs
 		return se, nil
 	}
 	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{Amounts: rewards}},
+		"reward": []shared.EventTransfer{{
+			Amounts: rewards,
+			Account: shared.Account{ID: withdrawAddr},
+		}},
 	}
 	return se, nil
 }
