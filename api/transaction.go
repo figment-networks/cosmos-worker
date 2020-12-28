@@ -266,7 +266,7 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 				case "vote":
 					ev, err = mapGovVoteToSub(msg)
 				case "submit_proposal":
-					ev, err = mapGovSubmitProposalToSub(msg)
+					ev, err = mapGovSubmitProposalToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}

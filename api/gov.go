@@ -66,13 +66,13 @@ func mapGovVoteToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	}, nil
 }
 
-func mapGovSubmitProposalToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapGovSubmitProposalToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	sp, ok := msg.(gov.MsgSubmitProposal)
 	if !ok {
 		return se, errors.New("Not a submit_proposal type")
 	}
 
-	evt := shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"submit_proposal"},
 		Module: "gov",
 		Node:   map[string][]shared.Account{"proposer": {{ID: sp.Proposer.String()}}},
@@ -96,26 +96,27 @@ func mapGovSubmitProposalToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 
 		txAmount[key] = am
 	}
-	evt.Sender = []shared.EventTransfer{sender}
-	evt.Amount = txAmount
+	se.Sender = []shared.EventTransfer{sender}
+	se.Amount = txAmount
 
-	evt.Additional = map[string][]string{}
+	se.Additional = map[string][]string{}
 
 	if sp.Content.ProposalRoute() != "" {
-		evt.Additional["proposal_route"] = []string{sp.Content.ProposalRoute()}
+		se.Additional["proposal_route"] = []string{sp.Content.ProposalRoute()}
 	}
 	if sp.Content.ProposalType() != "" {
-		evt.Additional["proposal_type"] = []string{sp.Content.ProposalType()}
+		se.Additional["proposal_type"] = []string{sp.Content.ProposalType()}
 	}
 	if sp.Content.GetDescription() != "" {
-		evt.Additional["descritpion"] = []string{sp.Content.GetDescription()}
+		se.Additional["descritpion"] = []string{sp.Content.GetDescription()}
 	}
 	if sp.Content.GetTitle() != "" {
-		evt.Additional["title"] = []string{sp.Content.GetTitle()}
+		se.Additional["title"] = []string{sp.Content.GetTitle()}
 	}
 	if sp.Content.String() != "" {
-		evt.Additional["content"] = []string{sp.Content.String()}
+		se.Additional["content"] = []string{sp.Content.String()}
 	}
 
-	return evt, nil
+	err = produceTransfers(&se, "send", logf)
+	return se, err
 }
