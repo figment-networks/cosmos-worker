@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
@@ -14,20 +13,23 @@ import (
 
 var zero big.Int
 
-func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	wvc, ok := msg.(distribution.MsgWithdrawValidatorCommission)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
 	}
 
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"withdraw_validator_commission"},
 		Module: "distribution",
 		Node:   map[string][]shared.Account{"validator": {{ID: wvc.ValidatorAddress.String()}}},
 		Recipient: []shared.EventTransfer{{
 			Account: shared.Account{ID: wvc.ValidatorAddress.String()},
 		}},
-	}, nil
+	}
+
+	err = produceTransfers(&se, "send", logf)
+	return se, err
 }
 
 func mapDistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
@@ -46,7 +48,7 @@ func mapDistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent,
 	}, nil
 }
 
-func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, er error) {
+func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
 	wdr, ok := msg.(distribution.MsgWithdrawDelegatorReward)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
@@ -63,59 +65,11 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}},
 	}
 
-	var withdrawAddr string
-	rewards := []shared.TransactionAmount{}
-	for _, ev := range logf.Events {
-		if ev.Type != "transfer" {
-			continue
-		}
-
-		for _, attr := range ev.Attributes {
-			if len(attr.Recipient) > 0 {
-				withdrawAddr = attr.Recipient[0]
-			}
-
-			for _, amount := range attr.Amount {
-				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
-				sliced := getCurrency(amount)
-				var (
-					c       *big.Int
-					exp     int32
-					coinErr error
-				)
-				if len(sliced) == 3 {
-					attrAmt.Currency = sliced[2]
-					c, exp, coinErr = getCoin(sliced[1])
-				} else {
-					c, exp, coinErr = getCoin(amount)
-				}
-				if coinErr != nil {
-					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
-				}
-				attrAmt.Text = amount
-				attrAmt.Numeric.Set(c)
-				attrAmt.Exp = exp
-				if attrAmt.Numeric.Cmp(&zero) != 0 {
-					rewards = append(rewards, attrAmt)
-				}
-			}
-		}
-	}
-
-	if len(rewards) == 0 {
-		return se, nil
-	}
-	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{
-			Amounts: rewards,
-			Account: shared.Account{ID: withdrawAddr},
-		}},
-	}
-
-	return se, nil
+	err = produceTransfers(&se, "reward", logf)
+	return se, err
 }
 
-func mapDistributionFundCommunityPoolToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+func mapDistributionFundCommunityPoolToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, er error) {
 
 	fcp, ok := msg.(distributiontypes.MsgFundCommunityPool)
 	if !ok {
@@ -123,15 +77,16 @@ func mapDistributionFundCommunityPoolToSub(msg sdk.Msg) (se shared.SubsetEvent, 
 	}
 
 	evt, err := distributionProduceEvTx(fcp.Depositor, fcp.Amount)
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"fund_community_pool"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
 			"depositor": {{ID: fcp.Depositor.String()}},
 		},
 		Sender: []shared.EventTransfer{evt},
-	}, err
-
+	}
+	err = produceTransfers(&se, "reward", logf)
+	return se, err
 }
 
 func distributionProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {

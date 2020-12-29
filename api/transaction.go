@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/figment-networks/indexer-manager/structs"
+	shared "github.com/figment-networks/indexer-manager/structs"
 	cStruct "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 	"github.com/figment-networks/indexing-engine/metrics"
 	"go.uber.org/zap"
@@ -220,14 +221,15 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 
 			var ev structs.SubsetEvent
 			var err error
+			logAtIndex := findLog(lf, index)
 
 			switch msg.Route() {
 			case "bank":
 				switch msg.Type() {
 				case "multisend":
-					ev, err = mapBankMultisendToSub(msg)
+					ev, err = mapBankMultisendToSub(msg, logAtIndex)
 				case "send":
-					ev, err = mapBankSendToSub(msg)
+					ev, err = mapBankSendToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -241,13 +243,13 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			case "distribution":
 				switch msg.Type() {
 				case "withdraw_validator_commission":
-					ev, err = mapDistributionWithdrawValidatorCommissionToSub(msg)
+					ev, err = mapDistributionWithdrawValidatorCommissionToSub(msg, logAtIndex)
 				case "set_withdraw_address":
 					ev, err = mapDistributionSetWithdrawAddressToSub(msg)
 				case "withdraw_delegator_reward":
-					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg, findLog(lf, index))
+					ev, err = mapDistributionWithdrawDelegatorRewardToSub(msg, logAtIndex)
 				case "fund_community_pool":
-					ev, err = mapDistributionFundCommunityPoolToSub(msg)
+					ev, err = mapDistributionFundCommunityPoolToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -261,11 +263,11 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			case "gov":
 				switch msg.Type() {
 				case "deposit":
-					ev, err = mapGovDepositToSub(msg)
+					ev, err = mapGovDepositToSub(msg, logAtIndex)
 				case "vote":
 					ev, err = mapGovVoteToSub(msg)
 				case "submit_proposal":
-					ev, err = mapGovSubmitProposalToSub(msg)
+					ev, err = mapGovSubmitProposalToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -279,15 +281,15 @@ func rawToTransaction(ctx context.Context, c *Client, in []TxResponse, blocks ma
 			case "staking":
 				switch msg.Type() {
 				case "begin_unbonding":
-					ev, err = mapStakingUndelegateToSub(msg, findLog(lf, index))
+					ev, err = mapStakingUndelegateToSub(msg, logAtIndex)
 				case "edit_validator":
 					ev, err = mapStakingEditValidatorToSub(msg)
 				case "create_validator":
 					ev, err = mapStakingCreateValidatorToSub(msg)
 				case "delegate":
-					ev, err = mapStakingDelegateToSub(msg, findLog(lf, index))
+					ev, err = mapStakingDelegateToSub(msg, logAtIndex)
 				case "begin_redelegate":
-					ev, err = mapStakingBeginRedelegateToSub(msg, findLog(lf, index))
+					ev, err = mapStakingBeginRedelegateToSub(msg, logAtIndex)
 				default:
 					c.logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", msg.Type()), zap.String("route", msg.Route()))
 				}
@@ -461,7 +463,7 @@ func (c *Client) GetFromRaw(logger *zap.Logger, txReader io.Reader) []map[string
 }
 
 func findLog(lf []LogFormat, index int) LogFormat {
-	if len(lf) < index {
+	if len(lf) <= index {
 		return LogFormat{}
 	}
 	if l := lf[index]; l.MsgIndex == float64(index) {
@@ -473,4 +475,65 @@ func findLog(lf []LogFormat, index int) LogFormat {
 		}
 	}
 	return LogFormat{}
+}
+
+func produceTransfers(se *shared.SubsetEvent, transferType string, logf LogFormat) (err error) {
+	var evts []shared.EventTransfer
+	m := make(map[string][]shared.TransactionAmount)
+	for _, ev := range logf.Events {
+		if ev.Type != "transfer" {
+			continue
+		}
+
+		var latestRecipient string
+		for _, attr := range ev.Attributes {
+			if len(attr.Recipient) > 0 {
+				latestRecipient = attr.Recipient[0]
+			}
+
+			for _, amount := range attr.Amount {
+				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
+				sliced := getCurrency(amount)
+				var (
+					c       *big.Int
+					exp     int32
+					coinErr error
+				)
+				if len(sliced) == 3 {
+					attrAmt.Currency = sliced[2]
+					c, exp, coinErr = getCoin(sliced[1])
+				} else {
+					c, exp, coinErr = getCoin(amount)
+				}
+				if coinErr != nil {
+					return fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
+				}
+
+				attrAmt.Text = amount
+				attrAmt.Exp = exp
+				attrAmt.Numeric.Set(c)
+
+				m[latestRecipient] = append(m[latestRecipient], attrAmt)
+
+			}
+		}
+	}
+
+	for addr, amts := range m {
+		evts = append(evts, shared.EventTransfer{
+			Amounts: amts,
+			Account: shared.Account{ID: addr},
+		})
+	}
+
+	if len(evts) <= 0 {
+		return
+	}
+
+	if se.Transfers[transferType] == nil {
+		se.Transfers = make(map[string][]shared.EventTransfer)
+	}
+	se.Transfers[transferType] = evts
+
+	return
 }
