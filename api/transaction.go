@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/figment-networks/indexer-manager/structs"
+	shared "github.com/figment-networks/indexer-manager/structs"
 	cStruct "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 	"github.com/figment-networks/indexing-engine/metrics"
 	"go.uber.org/zap"
