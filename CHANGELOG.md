@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.0.6] - 2020-12-29
+
+### Added
+- Field "transfers" in "sub" of transaction events. This contains "reward" and "send" transfers containing amount and recipient information.
+### Changed
+### Fixed
+
+
 ## [0.0.5] - 2020-12-02
 
 ### Added
