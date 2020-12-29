@@ -463,7 +463,7 @@ func (c *Client) GetFromRaw(logger *zap.Logger, txReader io.Reader) []map[string
 }
 
 func findLog(lf []LogFormat, index int) LogFormat {
-	if len(lf) < index {
+	if len(lf) <= index {
 		return LogFormat{}
 	}
 	if l := lf[index]; l.MsgIndex == float64(index) {
