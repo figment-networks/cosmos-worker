@@ -16,6 +16,7 @@ func EvidenceSubmitEvidenceToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) 
 		return se, errors.New("Not a submit_evidence type")
 	}
 
+	// TODO(lukanus): Any description of the contents of that is not available. Cosmos team is not responsive
 	return shared.SubsetEvent{
 		Type:       []string{"submit_evidence"},
 		Module:     "evidence",

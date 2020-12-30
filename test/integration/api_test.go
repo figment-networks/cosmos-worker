@@ -47,10 +47,12 @@ func TestGetBlock(t *testing.T) {
 			bm := &api.BlocksMap{
 				Blocks: make(map[uint64]structs.Block),
 			}
-			cli.GetBlocksMeta(ctx, structs.HeightRange{StartHeight: 200, EndHeight: 420}, bm, end)
+
+			err = cli.GetBlocksMeta(ctx, structs.HeightRange{StartHeight: 300, EndHeight: 450}, bm)
+			require.NoError(t, err)
 			for _, b := range bm.Blocks {
 				if b.NumberOfTransactions > 0 {
-					txs, err := cli.SearchTx(ctx, structs.HeightHash{Height: b.Height}, b)
+					txs, err := cli.SearchTx(ctx, structs.HeightHash{Height: b.Height}, b, 1)
 					require.NoError(t, err)
 					t.Logf("txs %+v", txs)
 				}
