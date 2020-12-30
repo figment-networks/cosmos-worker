@@ -104,9 +104,20 @@ func main() {
 
 	go c.Run(ctx, logger.GetLogger(), cfg.ManagerInterval)
 
-	grpcServer := grpc.NewServer()
+	if cfg.CosmosGRPCAddr == "" {
+		logger.Error(fmt.Errorf("cosmos grpc address is not set"))
+		return
+	}
+	grpcConn, dialErr := grpc.Dial(cfg.CosmosGRPCAddr, grpc.WithInsecure())
+	if dialErr != nil {
+		logger.Error(fmt.Errorf("error dialing grpc: %w", dialErr))
+		return
+	}
+	defer grpcConn.Close()
 
-	apiClient := api.NewClient(cfg.TendermintRPCAddr, cfg.DatahubKey, logger.GetLogger(), nil, int(cfg.RequestsPerSecond))
+	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond))
+
+	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.BigPage), uint64(cfg.MaximumHeightsToGet))
 
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())

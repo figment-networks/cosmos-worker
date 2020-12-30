@@ -98,24 +98,24 @@ func mapGovSubmitProposalToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	evt.Sender = []shared.EventTransfer{sender}
 	evt.Amount = txAmount
 
-	evt.Additional = map[string][]string{}
-	// TODO(lukanus): WTF is content
+	// TODO(lukanus): Any description of the contents of that is not available. Cosmos team is not responsive
 	/*
-		if sp.Content.ProposalRoute() != "" {
-			evt.Additional["proposal_route"] = []string{sp.Content.ProposalRoute()}
-		}
-		if sp.Content.ProposalType() != "" {
-			evt.Additional["proposal_type"] = []string{sp.Content.ProposalType()}
-		}
-		if sp.Content.GetDescription() != "" {
-			evt.Additional["descritpion"] = []string{sp.Content.GetDescription()}
-		}
-		if sp.Content.GetTitle() != "" {
-			evt.Additional["title"] = []string{sp.Content.GetTitle()}
-		}
-		if sp.Content.String() != "" {
-			evt.Additional["content"] = []string{sp.Content.String()}
-		}
+		//	evt.Additional = map[string][]string{}
+			if sp.Content.ProposalRoute() != "" {
+				evt.Additional["proposal_route"] = []string{sp.Content.ProposalRoute()}
+			}
+			if sp.Content.ProposalType() != "" {
+				evt.Additional["proposal_type"] = []string{sp.Content.ProposalType()}
+			}
+			if sp.Content.GetDescription() != "" {
+				evt.Additional["descritpion"] = []string{sp.Content.GetDescription()}
+			}
+			if sp.Content.GetTitle() != "" {
+				evt.Additional["title"] = []string{sp.Content.GetTitle()}
+			}
+			if sp.Content.String() != "" {
+				evt.Additional["content"] = []string{sp.Content.String()}
+			}
 	*/
 	return evt, nil
 }

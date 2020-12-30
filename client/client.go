@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"math"
 	"sync"
 	"time"
 
@@ -325,11 +323,7 @@ func getStartingHeight(lastHeight, maximumHeightsToGet, blockHeightFromDB uint64
 func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
 	defer logger.Sync()
 
-	batchesCtrl := make(chan error, 2)
-	defer close(batchesCtrl)
-	blocksAll := &api.BlocksMap{Blocks: map[uint64]structs.Block{}}
-
-	var i, responses uint64
+	var i uint64
 	for {
 		bhr := structs.HeightRange{
 			StartHeight: hr.StartHeight + uint64(i*blockchainEndpointLimit),
@@ -339,61 +333,36 @@ func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr st
 			bhr.EndHeight = hr.EndHeight
 		}
 
+		blocksAll := &api.BlocksMap{Blocks: map[uint64]structs.Block{}}
 		logger.Debug("[COSMOS-CLIENT] Getting blocks", zap.Uint64("end", bhr.EndHeight), zap.Uint64("start", bhr.StartHeight))
-		go client.GetBlocksMeta(ctx, bhr, blocksAll, batchesCtrl)
-		i++
+		if err := client.GetBlocksMeta(ctx, bhr, blocksAll); err != nil {
+			return err
+		}
 
+		for _, block := range blocksAll.Blocks {
+			out <- cStructs.OutResp{
+				Type:    "Block",
+				Payload: block,
+			}
+			if block.NumberOfTransactions > 0 {
+
+				logger.Debug("[COSMOS-CLIENT] Getting txs", zap.Uint64("block", block.Height), zap.Uint64("txs", block.NumberOfTransactions))
+				txs, err := client.SearchTx(ctx, structs.HeightHash{Height: block.Height}, block, page)
+				if err != nil {
+					return err
+				}
+				for _, tx := range txs {
+					out <- cStructs.OutResp{
+						Type:    "Transaction",
+						Payload: tx,
+					}
+				}
+			}
+		}
+
+		i++
 		if bhr.EndHeight == hr.EndHeight {
 			break
-		}
-	}
-
-	var errors = []error{}
-	for err := range batchesCtrl {
-		responses++
-		if err != nil {
-			errors = append(errors, err)
-		}
-		if responses == i {
-			break
-		}
-	}
-
-	if len(errors) > 0 {
-		errString := ""
-		for _, err := range errors {
-			errString += err.Error() + " , "
-		}
-		return fmt.Errorf("Errors Getting Blocks: - %s ", errString)
-	}
-
-	for _, block := range blocksAll.Blocks {
-		out <- cStructs.OutResp{
-			Type:    "Block",
-			Payload: block,
-		}
-	}
-
-	if blocksAll.NumTxs > 0 {
-		fin := make(chan string, 2)
-		defer close(fin)
-
-		toBeDone := int(math.Ceil(float64(blocksAll.NumTxs) / float64(page)))
-
-		logger.Debug("[COSMOS-CLIENT] Getting initial data ", zap.Uint64("all", blocksAll.NumTxs), zap.Int64("page", page), zap.Int("toBeDone", toBeDone))
-		for i := 0; i < toBeDone; i++ {
-			go client.SearchTx(ctx, hr, blocksAll.Blocks, out, i+1, page, fin)
-		}
-
-		var responses int
-		for c := range fin {
-			responses++
-			if c != "" {
-				logger.Error("[COSMOS-CLIENT] Getting response from SearchTX", zap.String("error", c))
-			}
-			if responses == toBeDone {
-				break
-			}
 		}
 	}
 
