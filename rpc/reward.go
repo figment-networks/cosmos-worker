@@ -15,7 +15,7 @@ import (
 var queryRewardsEndpoint = fmt.Sprintf("custom/distribution/%s", types.QueryDelegatorTotalRewards)
 
 // GetReward fetches total rewards for delegator account
-func (c Client) GetReward(ctx context.Context, req structs.HeightAccount) (rewards []structs.TransactionAmount, err error) {
+func (c *Client) GetReward(ctx context.Context, req structs.HeightAccount) (rewards []structs.TransactionAmount, err error) {
 	c.cliCtx = c.cliCtx.WithHeight(int64(req.Height))
 
 	addr, err := getAddr(req.Account)
