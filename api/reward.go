@@ -10,18 +10,26 @@ import (
 
 	"github.com/figment-networks/indexer-manager/structs"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
+type responseWithHeight struct {
+	Height string                                   `json:"height"`
+	Result types.QueryDelegatorTotalRewardsResponse `json:"result"`
+}
+
+const maxRetries = 3
+
 // GetReward fetches total rewards for delegator account
-func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (rresp structs.GetRewardResponse, err error) {
-	rresp.Height = params.Height
+func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error) {
+	resp.Height = params.Height
 	endpoint := fmt.Sprintf("/distribution/delegators/%v/rewards", params.Account)
 
 	req, err := http.NewRequest(http.MethodGet, c.baseURL+endpoint, nil)
 	if err != nil {
-		return rresp, err
+		return resp, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -38,51 +46,54 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 
 	err = c.rateLimiter.Wait(ctx)
 	if err != nil {
-		return rresp, err
+		return resp, err
 	}
 
-	n := time.Now()
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return rresp, err
+	var cliResp *http.Response
+
+	for i := 1; i <= maxRetries; i++ {
+		n := time.Now()
+
+		cliResp, err = c.httpClient.Do(req)
+		if err != nil {
+			return resp, err
+		}
+		rawRequestDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
+
+		defer cliResp.Body.Close()
+
+		if cliResp.StatusCode < 500 {
+			break
+		}
+		time.Sleep(time.Duration(i*500) * time.Millisecond)
 	}
-	rawRequestDuration.WithLabels(endpoint, resp.Status).Observe(time.Since(n).Seconds())
-	defer resp.Body.Close()
 
-	decoder := json.NewDecoder(resp.Body)
+	decoder := json.NewDecoder(cliResp.Body)
 
-	fmt.Println("resp.StatusCode ", resp.StatusCode)
-
-	if resp.StatusCode > 399 {
+	if cliResp.StatusCode > 399 {
 		var result rest.ErrorResponse
 		if err = decoder.Decode(&result); err != nil {
-			return rresp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %d", resp.StatusCode)
+			return resp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %d", cliResp.StatusCode)
 		}
-		return rresp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %s ", result.Error)
+		return resp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %s ", result.Error)
 	}
-
-	type ResponseWithHeight struct {
-		Height string                                   `json:"height"`
-		Result types.QueryDelegatorTotalRewardsResponse `json:"result"`
-	}
-
-	var result ResponseWithHeight
+	var result responseWithHeight
 	if err = decoder.Decode(&result); err != nil {
-		return rresp, err
+		return resp, err
 	}
 
 	if len(result.Result.Total) < 1 {
-		return rresp, nil
+		return resp, nil
 	}
 
-	rresp.Rewards = structs.TransactionAmount{
+	resp.Rewards = structs.TransactionAmount{
 		Text:     result.Result.Total[0].Amount.String(),
 		Numeric:  result.Result.Total[0].Amount.BigInt(),
 		Currency: result.Result.Total[0].Denom,
 		Exp:      sdk.Precision,
 	}
 
-	// round rewards up?
+	// TODO round rewards up?
 
-	return rresp, err
+	return resp, err
 }
