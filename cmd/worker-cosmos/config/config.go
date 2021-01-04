@@ -28,6 +28,7 @@ type Config struct {
 	HTTPPort string `json:"http_port" envconfig:"HTTP_PORT" default:"8087"`
 
 	TendermintRPCAddr string `json:"tendermint_rpc_addr" envconfig:"TENDERMINT_RPC_ADDR" required:"true"`
+	TendermintLCDAddr string `json:"tendermint_lcd_addr" envconfig:"TENDERMINT_LCD_ADDR" required:"true"`
 	DatahubKey        string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
 	ChainID           string `json:"chain_id" envconfig:"CHAIN_ID"`
 

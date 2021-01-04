@@ -16,7 +16,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/figment-networks/cosmos-worker/api"
-	"github.com/figment-networks/cosmos-worker/rpc"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 )
 
@@ -31,8 +30,8 @@ var (
 
 // IndexerClient is implementation of a client (main worker code)
 type IndexerClient struct {
-	tendermintCli *api.Client
-	archiveCli    *rpc.Client
+	rpcCli *api.Client
+	lcdCli *api.Client
 
 	logger  *zap.Logger
 	streams map[uuid.UUID]*cStructs.StreamAccess
@@ -43,7 +42,7 @@ type IndexerClient struct {
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, tendermintCli *api.Client, archiveCli *rpc.Client, bigPage, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli, lcdCli *api.Client, bigPage, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -51,8 +50,8 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, tendermintCli *ap
 
 	return &IndexerClient{
 		logger:              logger,
-		tendermintCli:       tendermintCli,
-		archiveCli:          archiveCli,
+		rpcCli:              rpcCli,
+		lcdCli:              lcdCli,
 		bigPage:             bigPage,
 		maximumHeightsToGet: maximumHeightsToGet,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
@@ -104,11 +103,11 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 			nCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 			switch taskRequest.Type {
 			case structs.ReqIDGetTransactions:
-				ic.GetTransactions(nCtx, taskRequest, stream, ic.tendermintCli)
+				ic.GetTransactions(nCtx, taskRequest, stream, ic.rpcCli)
 			case structs.ReqIDLatestData:
-				ic.GetLatest(nCtx, taskRequest, stream, ic.tendermintCli)
+				ic.GetLatest(nCtx, taskRequest, stream, ic.rpcCli)
 			case structs.ReqIDGetReward:
-				ic.GetReward(nCtx, taskRequest, stream, ic.archiveCli)
+				ic.GetReward(nCtx, taskRequest, stream, ic.lcdCli)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -239,7 +238,7 @@ func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, 
 }
 
 // GetReward gets reward
-func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *rpc.Client) {
+func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *api.Client) {
 	timer := metrics.NewTimer(getBlockDuration)
 	defer timer.ObserveDuration()
 
@@ -288,7 +287,7 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 	ldr := &structs.LatestDataRequest{}
 	err := json.Unmarshal(tr.Payload, ldr)
 	if err != nil {
-		stream.Send(cStructs.TaskResponse{Id: tr.Id, Error: cStructs.TaskError{Msg: "Cannot unmarshal payment"}, Final: true})
+		stream.Send(cStructs.TaskResponse{Id: tr.Id, Error: cStructs.TaskError{Msg: "Cannot unmarshal payload"}, Final: true})
 	}
 
 	sCtx, cancel := context.WithCancel(ctx)

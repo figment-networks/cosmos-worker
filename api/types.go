@@ -3,6 +3,8 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
 // TxResponse is result of querying for a tx
@@ -16,6 +18,12 @@ type TxResponse struct {
 	TxData string `json:"tx"`
 
 	All int64
+}
+
+// RewardResponse is cosmos response from /rewards
+type RewardResponse struct {
+	Result *types.QueryDelegatorTotalRewardsResponse `json:"result"`
+	Error  Error                                     `json:"error"`
 }
 
 // ResponseDeliverTx result
