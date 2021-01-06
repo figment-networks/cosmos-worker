@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,9 +54,10 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 
 	for i := 1; i <= maxRetries; i++ {
 		n := time.Now()
-
 		cliResp, err = c.httpClient.Do(req)
-		if err != nil {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			continue
+		} else if err != nil {
 			return resp, err
 		}
 		rawRequestDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
