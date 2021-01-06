@@ -95,7 +95,5 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		Exp:      sdk.Precision,
 	}
 
-	// TODO round rewards up?
-
 	return resp, err
 }
