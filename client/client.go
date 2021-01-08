@@ -28,10 +28,20 @@ var (
 	getBlockDuration       *metrics.GroupObserver
 )
 
+type RPC interface {
+	GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, err error)
+	GetBlocksMeta(ctx context.Context, params structs.HeightRange, blocks *api.BlocksMap, end chan<- error)
+	SearchTx(ctx context.Context, r structs.HeightRange, blocks map[uint64]structs.Block, out chan cStructs.OutResp, page, perPage int, fin chan string)
+}
+
+type LCD interface {
+	GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error)
+}
+
 // IndexerClient is implementation of a client (main worker code)
 type IndexerClient struct {
-	rpcCli *api.Client
-	lcdCli *api.Client
+	rpcCli RPC
+	lcdCli LCD
 
 	logger  *zap.Logger
 	streams map[uuid.UUID]*cStructs.StreamAccess
@@ -42,7 +52,7 @@ type IndexerClient struct {
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli, lcdCli *api.Client, bigPage, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCli LCD, bigPage, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -122,7 +132,7 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 
 // GetTransactions gets new transactions and blocks from cosmos for given range
 // it slice requests for batch up to the `bigPage` count
-func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *api.Client) {
+func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client RPC) {
 	timer := metrics.NewTimer(getTransactionDuration)
 	defer timer.ObserveDuration()
 
@@ -197,7 +207,7 @@ func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRe
 }
 
 // GetBlock gets block
-func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *api.Client) {
+func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client RPC) {
 	timer := metrics.NewTimer(getBlockDuration)
 	defer timer.ObserveDuration()
 
@@ -238,7 +248,7 @@ func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, 
 }
 
 // GetReward gets reward
-func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *api.Client) {
+func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client LCD) {
 	timer := metrics.NewTimer(getBlockDuration)
 	defer timer.ObserveDuration()
 
@@ -280,7 +290,7 @@ func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest,
 
 // GetLatest gets latest transactions and blocks.
 // It gets latest transaction, then diff it with
-func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client *api.Client) {
+func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client RPC) {
 	timer := metrics.NewTimer(getLatestDuration)
 	defer timer.ObserveDuration()
 
@@ -368,7 +378,7 @@ func getStartingHeight(lastHeight, maximumHeightsToGet, blockHeightFromDB uint64
 }
 
 // getRange gets given range of blocks and transactions
-func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
+func getRange(ctx context.Context, logger *zap.Logger, client RPC, hr structs.HeightRange, out chan cStructs.OutResp) error {
 	defer logger.Sync()
 
 	batchesCtrl := make(chan error, 2)
