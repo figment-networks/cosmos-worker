@@ -84,15 +84,15 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		return resp, err
 	}
 
-	if len(result.Result.Total) < 1 {
-		return resp, nil
-	}
-
-	resp.Rewards = structs.TransactionAmount{
-		Text:     result.Result.Total[0].Amount.String(),
-		Numeric:  result.Result.Total[0].Amount.BigInt(),
-		Currency: result.Result.Total[0].Denom,
-		Exp:      sdk.Precision,
+	for _, reward := range result.Result.Total {
+		resp.Rewards = append(resp.Rewards,
+			structs.TransactionAmount{
+				Text:     reward.Amount.String(),
+				Numeric:  reward.Amount.BigInt(),
+				Currency: reward.Denom,
+				Exp:      sdk.Precision,
+			},
+		)
 	}
 
 	return resp, err
