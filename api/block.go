@@ -29,7 +29,7 @@ type BlockErrorPair struct {
 }
 
 // GetBlock fetches most recent block from chain
-func (c Client) GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, er error) {
+func (c Client) GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, err error) {
 	var ok bool
 	if params.Height != 0 {
 		block, ok = c.Sbc.Get(params.Height)
