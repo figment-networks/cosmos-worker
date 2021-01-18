@@ -129,7 +129,7 @@ func mapStakingBeginRedelegateToSub(msg sdk.Msg, logf LogFormat) (se shared.Subs
 		Node: map[string][]shared.Account{
 			"delegator":             {{ID: br.DelegatorAddress.String()}},
 			"validator_destination": {{ID: br.ValidatorDstAddress.String()}},
-			"validator_source":      {{ID: br.ValidatorDstAddress.String()}},
+			"validator_source":      {{ID: br.ValidatorSrcAddress.String()}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
