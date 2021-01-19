@@ -1,4 +1,4 @@
-package api
+package mapper
 
 import (
 	"errors"
@@ -9,7 +9,8 @@ import (
 	crisis "github.com/cosmos/cosmos-sdk/x/crisis"
 )
 
-func mapCrisisVerifyInvariantToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+// CrisisVerifyInvariantToSub transforms crisis.MsgVerifyInvariant sdk messages to SubsetEvent
+func CrisisVerifyInvariantToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	mvi, ok := msg.(crisis.MsgVerifyInvariant)
 	if !ok {
 		return se, errors.New("Not a verify_invariant type")

@@ -1,16 +1,17 @@
-package api
+package mapper
 
 import (
 	"errors"
 
+	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bank "github.com/cosmos/cosmos-sdk/x/bank"
 )
 
-func mapBankMultisendToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
-
+// BankMultisendToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
+func BankMultisendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
 	multisend, ok := msg.(bank.MsgMultiSend)
 	if !ok {
 		return se, errors.New("Not a multisend type")
@@ -36,11 +37,12 @@ func mapBankMultisendToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, 
 		se.Recipient = append(se.Recipient, evt)
 	}
 
-	err = produceTransfers(&se, "send", logf)
+	err = produceTransfers(&se, TransferTypeSend, logf)
 	return se, err
 }
 
-func mapBankSendToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
+// BankSendToSub transforms bank.MsgSend sdk messages to SubsetEvent
+func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
 	send, ok := msg.(bank.MsgSend)
 	if !ok {
 		return se, errors.New("Not a send type")
@@ -57,7 +59,7 @@ func mapBankSendToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err e
 	evt, _ = bankProduceEvTx(send.ToAddress, send.Amount)
 	se.Recipient = append(se.Recipient, evt)
 
-	err = produceTransfers(&se, "send", logf)
+	err = produceTransfers(&se, TransferTypeSend, logf)
 	return se, err
 }
 

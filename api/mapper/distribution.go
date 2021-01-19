@@ -1,9 +1,10 @@
-package api
+package mapper
 
 import (
 	"errors"
 	"math/big"
 
+	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,7 +14,8 @@ import (
 
 var zero big.Int
 
-func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
+// DistributionWithdrawValidatorCommissionToSub transforms distribution.MsgWithdrawValidatorCommission sdk messages to SubsetEvent
+func DistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
 	wvc, ok := msg.(distribution.MsgWithdrawValidatorCommission)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
@@ -28,11 +30,12 @@ func mapDistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf LogFormat
 		}},
 	}
 
-	err = produceTransfers(&se, "send", logf)
+	err = produceTransfers(&se, TransferTypeSend, logf)
 	return se, err
 }
 
-func mapDistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+// DistributionSetWithdrawAddressToSub transforms distribution.MsgSetWithdrawAddress sdk messages to SubsetEvent
+func DistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	swa, ok := msg.(distribution.MsgSetWithdrawAddress)
 	if !ok {
 		return se, errors.New("Not a set_withdraw_address type")
@@ -48,7 +51,8 @@ func mapDistributionSetWithdrawAddressToSub(msg sdk.Msg) (se shared.SubsetEvent,
 	}, nil
 }
 
-func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, err error) {
+// DistributionWithdrawDelegatorRewardToSub transforms distribution.MsgWithdrawDelegatorReward sdk messages to SubsetEvent
+func DistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
 	wdr, ok := msg.(distribution.MsgWithdrawDelegatorReward)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
@@ -65,12 +69,12 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf LogFormat) (s
 		}},
 	}
 
-	err = produceTransfers(&se, "reward", logf)
+	err = produceTransfers(&se, TransferTypeReward, logf)
 	return se, err
 }
 
-func mapDistributionFundCommunityPoolToSub(msg sdk.Msg, logf LogFormat) (se shared.SubsetEvent, er error) {
-
+// DistributionFundCommunityPoolToSub transforms distributiontypes.MsgFundCommunityPool sdk messages to SubsetEvent
+func DistributionFundCommunityPoolToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, er error) {
 	fcp, ok := msg.(distributiontypes.MsgFundCommunityPool)
 	if !ok {
 		return se, errors.New("Not a withdraw_validator_commission type")
@@ -85,7 +89,7 @@ func mapDistributionFundCommunityPoolToSub(msg sdk.Msg, logf LogFormat) (se shar
 		},
 		Sender: []shared.EventTransfer{evt},
 	}
-	err = produceTransfers(&se, "reward", logf)
+	err = produceTransfers(&se, TransferTypeReward, logf)
 	return se, err
 }
 
