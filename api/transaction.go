@@ -41,7 +41,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 
 		now := time.Now()
 		grpcRes, err := c.txServiceClient.GetTxsEvent(ctx, &tx.GetTxsEventRequest{
-			//Events: []string{"message.action=submit_proposal"},
+			//Events: []string{"message.action=submit_evidence"},
 			Events:     []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
 			Pagination: pag,
 		})

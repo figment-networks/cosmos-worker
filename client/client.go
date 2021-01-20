@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/figment-networks/cosmos-worker/api"
+	"github.com/figment-networks/cosmos-worker/cmd/common/logger"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 )
 
@@ -149,30 +151,14 @@ func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRe
 	// (lukanus): in separate goroutine take transaction format wrap it in transport message and send
 	go sendResp(sCtx, tr.Id, out, ic.logger, stream, fin)
 
-	var i uint64
-	for {
-		hrInner := structs.HeightRange{
-			StartHeight: hr.StartHeight + i*ic.bigPage,
-			EndHeight:   hr.StartHeight + i*ic.bigPage + ic.bigPage - 1,
-		}
-		if hrInner.EndHeight > hr.EndHeight {
-			hrInner.EndHeight = hr.EndHeight
-		}
-
-		if err := getRange(sCtx, ic.logger, client, hrInner, out); err != nil {
-			stream.Send(cStructs.TaskResponse{
-				Id:    tr.Id,
-				Error: cStructs.TaskError{Msg: err.Error()},
-				Final: true,
-			})
-			ic.logger.Error("[COSMOS-CLIENT] Error getting range (Get Transactions) ", zap.Error(err), zap.Stringer("taskID", tr.Id))
-			return
-		}
-
-		i++
-		if hrInner.EndHeight == hr.EndHeight {
-			break
-		}
+	if err := getRange(sCtx, ic.logger, client, *hr, out); err != nil {
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: err.Error()},
+			Final: true,
+		})
+		ic.logger.Error("[COSMOS-CLIENT] Error getting range (Get Transactions) ", zap.Error(err), zap.Stringer("taskID", tr.Id))
+		return
 	}
 
 	ic.logger.Debug("[COSMOS-CLIENT] Received all", zap.Stringer("taskID", tr.Id))
@@ -319,53 +305,120 @@ func getStartingHeight(lastHeight, maximumHeightsToGet, blockHeightFromDB uint64
 	return lastHeight
 }
 
-// getRange gets given range of blocks and transactions
-func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
-	defer logger.Sync()
+func blockAndTx(ctx context.Context, client *api.Client, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
 
-	var i uint64
+	logger.Debug("[COSMOS-CLIENT] Getting block", zap.Uint64("block", height))
+	block, err = client.GetBlock(ctx, structs.HeightHash{Height: uint64(height)})
+	if err != nil {
+		return block, nil, fmt.Errorf("error fetching block: %d %w ", uint64(height), err)
+	}
+
+	if block.NumberOfTransactions > 0 {
+		logger.Debug("[COSMOS-CLIENT] Getting txs", zap.Uint64("block", height), zap.Uint64("txs", block.NumberOfTransactions))
+		txs, err = client.SearchTx(ctx, structs.HeightHash{Height: height}, block, page)
+	}
+	return block, txs, err
+}
+
+func asyncBlockAndTx(ctx context.Context, client *api.Client, cinn chan hBTx) {
+	for in := range cinn {
+		b, txs, err := blockAndTx(ctx, client, in.Height)
+		if err != nil {
+			in.Ch <- cStructs.OutResp{
+				ID:    b.ID,
+				Error: err,
+				Type:  "Error",
+			}
+			return
+		}
+		in.Ch <- cStructs.OutResp{
+			ID:      b.ID,
+			Type:    "Block",
+			Payload: b,
+		}
+
+		if txs != nil {
+			for _, t := range txs {
+				in.Ch <- cStructs.OutResp{
+					ID:      t.ID,
+					Type:    "Transaction",
+					Payload: t,
+				}
+			}
+		}
+
+		in.Ch <- cStructs.OutResp{
+			ID:   b.ID,
+			Type: "Partial",
+		}
+	}
+}
+
+type hBTx struct {
+	Height uint64
+	Last   bool
+	Ch     chan cStructs.OutResp
+}
+
+func populateRange(in, out chan hBTx, hr structs.HeightRange) {
+
+	height := hr.StartHeight
+
 	for {
-		bhr := structs.HeightRange{
-			StartHeight: hr.StartHeight + uint64(i*blockchainEndpointLimit),
-			EndHeight:   hr.StartHeight + uint64(i*blockchainEndpointLimit) + uint64(blockchainEndpointLimit) - 1,
-		}
-		if bhr.EndHeight > hr.EndHeight {
-			bhr.EndHeight = hr.EndHeight
-		}
-
-		blocksAll := &api.BlocksMap{Blocks: map[uint64]structs.Block{}}
-		logger.Debug("[COSMOS-CLIENT] Getting blocks", zap.Uint64("end", bhr.EndHeight), zap.Uint64("start", bhr.StartHeight))
-		if err := client.GetBlocksMeta(ctx, bhr, blocksAll); err != nil {
-			return err
-		}
-
-		for _, block := range blocksAll.Blocks {
-			out <- cStructs.OutResp{
-				Type:    "Block",
-				Payload: block,
-			}
-			if block.NumberOfTransactions > 0 {
-
-				logger.Debug("[COSMOS-CLIENT] Getting txs", zap.Uint64("block", block.Height), zap.Uint64("txs", block.NumberOfTransactions))
-				txs, err := client.SearchTx(ctx, structs.HeightHash{Height: block.Height}, block, page)
-				if err != nil {
-					return err
-				}
-				for _, tx := range txs {
-					out <- cStructs.OutResp{
-						Type:    "Transaction",
-						Payload: tx,
-					}
-				}
-			}
-		}
-
-		i++
-		if bhr.EndHeight == hr.EndHeight {
+		hBTxO := hBTx{Height: height, Ch: oRespPool.Get()}
+		out <- hBTxO
+		in <- hBTxO
+		height++
+		if height >= hr.EndHeight {
+			out <- hBTx{Last: true}
 			break
 		}
 	}
 
+	close(in)
+}
+
+// getRange gets given range of blocks and transactions
+func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
+	defer logger.Sync()
+
+	chIn := oHBTxPool.Get()
+	chOut := oHBTxPool.Get()
+
+	for i := 0; i < 5; i++ {
+		go asyncBlockAndTx(ctx, client, chIn)
+	}
+	go populateRange(chIn, chOut, hr)
+
+RANGE_LOOP:
+	for {
+		select {
+		// (lukanus): add timeout
+		case o := <-chOut:
+			if o.Last {
+				break RANGE_LOOP
+			}
+
+			logger.Debug("[COSMOS-CLIENT] Sending height", zap.Uint64("heigh", o.Height))
+		INNER_LOOP:
+			for resp := range o.Ch {
+				logger.Debug("[COSMOS-CLIENT] got height", zap.Any("a", resp))
+				switch resp.Type {
+				case "Partial":
+					break INNER_LOOP
+				case "Error":
+					out <- resp
+					break INNER_LOOP
+				default:
+					out <- resp
+				}
+			}
+
+			logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("heigh", o.Height))
+			oRespPool.Put(o.Ch)
+		}
+	}
+	oHBTxPool.Put(chOut)
 	return nil
 }
 
@@ -429,4 +482,79 @@ SendLoop:
 		close(fin)
 	}
 
+}
+
+var (
+	oRespPool = NewOutRespPool(20)
+	oHBTxPool = NewHBTxPool(20)
+)
+
+type outRespPool struct {
+	stor chan chan cStructs.OutResp
+	lock sync.Mutex
+}
+
+func NewOutRespPool(cap int) *outRespPool {
+	return &outRespPool{
+		stor: make(chan chan cStructs.OutResp, cap),
+	}
+}
+
+func (o *outRespPool) Get() chan cStructs.OutResp {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	select {
+	case a := <-o.stor:
+		return a
+	default:
+	}
+
+	return make(chan cStructs.OutResp, 10)
+}
+
+func (o *outRespPool) Put(or chan cStructs.OutResp) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	select {
+	case o.stor <- or:
+	default:
+		close(or)
+	}
+
+	return
+}
+
+type hBTxPool struct {
+	stor chan chan hBTx
+	lock sync.Mutex
+}
+
+func NewHBTxPool(cap int) *hBTxPool {
+	return &hBTxPool{
+		stor: make(chan chan hBTx, cap),
+	}
+}
+
+func (o *hBTxPool) Get() chan hBTx {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	select {
+	case a := <-o.stor:
+		return a
+	default:
+	}
+
+	return make(chan hBTx, 10)
+}
+
+func (o *hBTxPool) Put(or chan hBTx) {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	select {
+	case o.stor <- or:
+	default:
+		close(or)
+	}
+
+	return
 }
