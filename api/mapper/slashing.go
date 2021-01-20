@@ -1,4 +1,4 @@
-package api
+package mapper
 
 import (
 	"errors"
@@ -9,7 +9,8 @@ import (
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing"
 )
 
-func mapSlashingUnjailToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
+// SlashingUnjailToSub transforms slashing.MsgUnjail sdk messages to SubsetEvent
+func SlashingUnjailToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
 	unjail, ok := msg.(slashing.MsgUnjail)
 	if !ok {
 		return se, errors.New("Not a unjail type")
