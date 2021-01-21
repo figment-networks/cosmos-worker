@@ -1,16 +1,17 @@
-package api
+package mapper
 
 import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	distribution "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/gogo/protobuf/proto"
 )
 
-func mapDistributionWithdrawValidatorCommissionToSub(msg []byte) (se shared.SubsetEvent, er error) {
+// DistributionWithdrawValidatorCommissionToSub transforms distribution.MsgWithdrawValidatorCommission sdk messages to SubsetEvent
+func DistributionWithdrawValidatorCommissionToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	wvc := &distribution.MsgWithdrawValidatorCommission{}
 	if err := proto.Unmarshal(msg, wvc); err != nil {
 		return se, errors.New("Not a distribution type" + err.Error())
@@ -26,7 +27,8 @@ func mapDistributionWithdrawValidatorCommissionToSub(msg []byte) (se shared.Subs
 	}, nil
 }
 
-func mapDistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, er error) {
+// DistributionSetWithdrawAddressToSub transforms distribution.MsgSetWithdrawAddress sdk messages to SubsetEvent
+func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	swa := &distribution.MsgSetWithdrawAddress{}
 	if err := proto.Unmarshal(msg, swa); err != nil {
 		return se, errors.New("Not a set_withdraw_address type" + err.Error())
@@ -42,7 +44,8 @@ func mapDistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, 
 	}, nil
 }
 
-func mapDistributionWithdrawDelegatorRewardToSub(msg []byte) (se shared.SubsetEvent, er error) {
+// DistributionWithdrawDelegatorRewardToSub transforms distribution.MsgWithdrawDelegatorReward sdk messages to SubsetEvent
+func DistributionWithdrawDelegatorRewardToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	wdr := &distribution.MsgWithdrawDelegatorReward{}
 	if err := proto.Unmarshal(msg, wdr); err != nil {
 		return se, errors.New("Not a withdraw_validator_commission type" + err.Error())
@@ -61,7 +64,8 @@ func mapDistributionWithdrawDelegatorRewardToSub(msg []byte) (se shared.SubsetEv
 	}, nil
 }
 
-func mapDistributionFundCommunityPoolToSub(msg []byte) (se shared.SubsetEvent, er error) {
+// DistributionFundCommunityPoolToSub transforms distribution.MsgFundCommunityPool sdk messages to SubsetEvent
+func DistributionFundCommunityPoolToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	fcp := &distribution.MsgFundCommunityPool{}
 	if err := proto.Unmarshal(msg, fcp); err != nil {
 		return se, errors.New("Not a fund_community_pool type" + err.Error())

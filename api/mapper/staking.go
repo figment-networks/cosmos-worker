@@ -1,15 +1,16 @@
-package api
+package mapper
 
 import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/gogo/protobuf/proto"
 )
 
-func mapStakingUndelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+// StakingUndelegateToSub transforms staking.MsgUndelegate sdk messages to SubsetEvent
+func StakingUndelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	u := &staking.MsgUndelegate{}
 	if err := proto.Unmarshal(msg, u); err != nil {
 		return se, errors.New("Not a undelegate type" + err.Error())
@@ -31,7 +32,8 @@ func mapStakingUndelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	}, err
 }
 
-func mapStakingDelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+// StakingDelegateToSub transforms staking.MsgDelegate sdk messages to SubsetEvent
+func StakingDelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	d := &staking.MsgDelegate{}
 	if err := proto.Unmarshal(msg, d); err != nil {
 		return se, errors.New("Not a delegate type" + err.Error())
@@ -54,7 +56,8 @@ func mapStakingDelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	}, err
 }
 
-func mapStakingBeginRedelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+// StakingBeginRedelegateToSub transforms staking.MsgBeginRedelegate sdk messages to SubsetEvent
+func StakingBeginRedelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	br := &staking.MsgBeginRedelegate{}
 	if err := proto.Unmarshal(msg, br); err != nil {
 		return se, errors.New("Not a begin_redelegate type" + err.Error())
@@ -78,7 +81,8 @@ func mapStakingBeginRedelegateToSub(msg []byte) (se shared.SubsetEvent, err erro
 	}, err
 }
 
-func mapStakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+// StakingCreateValidatorToSub transforms staking.MsgCreateValidator sdk messages to SubsetEvent
+func StakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	ev := &staking.MsgCreateValidator{}
 	if err := proto.Unmarshal(msg, ev); err != nil {
 		return se, errors.New("Not a create_validator type" + err.Error())
@@ -125,7 +129,8 @@ func mapStakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err erro
 	}, err
 }
 
-func mapStakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+// StakingEditValidatorToSub transforms staking.MsgEditValidator sdk messages to SubsetEvent
+func StakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	ev := &staking.MsgEditValidator{}
 	if err := proto.Unmarshal(msg, ev); err != nil {
 		return se, errors.New("Not a edit_validator type" + err.Error())

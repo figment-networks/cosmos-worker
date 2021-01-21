@@ -1,15 +1,16 @@
-package api
+package mapper
 
 import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	evidence "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/gogo/protobuf/proto"
 )
 
-func mapEvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
+// EvidenceSubmitEvidenceToSub transforms evidence.MsgSubmitEvidence sdk messages to SubsetEvent
+func EvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	mse := &evidence.MsgSubmitEvidence{}
 	if err := proto.Unmarshal(msg, mse); err != nil {
 		return se, errors.New("Not a submit_evidence type" + err.Error())
