@@ -4,16 +4,16 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	crisis "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // CrisisVerifyInvariantToSub transforms crisis.MsgVerifyInvariant sdk messages to SubsetEvent
-func CrisisVerifyInvariantToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
-	mvi, ok := msg.(crisis.MsgVerifyInvariant)
-	if !ok {
-		return se, errors.New("Not a verify_invariant type")
+func CrisisVerifyInvariantToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	mvi := &crisis.MsgVerifyInvariant{}
+	if err := proto.Unmarshal(msg, mvi); err != nil {
+		return se, errors.New("Not a crisis type" + err.Error())
 	}
 
 	return shared.SubsetEvent{

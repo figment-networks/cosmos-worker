@@ -4,16 +4,16 @@ import (
 	"errors"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	evidence "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // EvidenceSubmitEvidenceToSub transforms evidence.MsgSubmitEvidence sdk messages to SubsetEvent
-func EvidenceSubmitEvidenceToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
-	mse, ok := msg.(evidence.MsgSubmitEvidence)
-	if !ok {
-		return se, errors.New("Not a submit_evidence type")
+func EvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	mse := &evidence.MsgSubmitEvidence{}
+	if err := proto.Unmarshal(msg, mse); err != nil {
+		return se, errors.New("Not a submit_evidence type" + err.Error())
 	}
 
 	// TODO(lukanus): Any description of the contents of that is not available. Cosmos team is not responsive

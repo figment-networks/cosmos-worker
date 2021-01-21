@@ -5,17 +5,17 @@ import (
 
 	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // BankMultisendToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
-func BankMultisendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	multisend, ok := msg.(bank.MsgMultiSend)
-	if !ok {
-		return se, errors.New("Not a multisend type")
+func BankMultisendToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	multisend := &bank.MsgMultiSend{}
+	if err := proto.Unmarshal(msg, multisend); err != nil {
+		return se, errors.New("Not a multisend type" + err.Error())
 	}
 
 	se = shared.SubsetEvent{
@@ -43,10 +43,10 @@ func BankMultisendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEven
 }
 
 // BankSendToSub transforms bank.MsgSend sdk messages to SubsetEvent
-func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	send, ok := msg.(bank.MsgSend)
-	if !ok {
-		return se, errors.New("Not a send type")
+func BankSendToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	send := &bank.MsgSend{}
+	if err := proto.Unmarshal(msg, send); err != nil {
+		return se, errors.New("Not a send type" + err.Error())
 	}
 
 	se = shared.SubsetEvent{
@@ -65,7 +65,6 @@ func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, er
 }
 
 func bankProduceEvTx(account string, coins types.Coins) (evt shared.EventTransfer, err error) {
-
 	evt = shared.EventTransfer{
 		Account: shared.Account{ID: account},
 	}

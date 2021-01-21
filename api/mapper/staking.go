@@ -2,28 +2,21 @@ package mapper
 
 import (
 	"errors"
-	"fmt"
-	"math/big"
 
-	"github.com/figment-networks/cosmos-worker/api/types"
-	"github.com/figment-networks/cosmos-worker/api/util"
 	shared "github.com/figment-networks/indexer-manager/structs"
-	"github.com/gogo/protobuf/proto"
 
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/gogo/protobuf/proto"
 )
 
-const unbondedTokensPoolAddr = "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r"
-
 // StakingUndelegateToSub transforms staking.MsgUndelegate sdk messages to SubsetEvent
-func StakingUndelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	u, ok := msg.(staking.MsgUndelegate)
-	if !ok {
-		return se, errors.New("Not a begin_unbonding type")
+func StakingUndelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	u := &staking.MsgUndelegate{}
+	if err := proto.Unmarshal(msg, u); err != nil {
+		return se, errors.New("Not a undelegate type" + err.Error())
 	}
-
-	se = shared.SubsetEvent{
-		Type:   []string{"begin_unbonding"},
+	return shared.SubsetEvent{
+		Type:   []string{"undelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
 			"delegator": {{ID: u.DelegatorAddress}},
@@ -36,72 +29,17 @@ func StakingUndelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.Subset
 				Text:     u.Amount.String(),
 			},
 		},
-	}
-
-	var withdrawAddr string
-	rewards := []shared.TransactionAmount{}
-	for _, ev := range logf.Events {
-		if ev.Type != "transfer" {
-			continue
-		}
-
-		var latestRecipient string
-		for _, attr := range ev.Attributes {
-			if len(attr.Recipient) > 0 {
-				latestRecipient = attr.Recipient[0]
-			}
-			if latestRecipient == unbondedTokensPoolAddr {
-				continue
-			}
-			withdrawAddr = latestRecipient
-
-			for _, amount := range attr.Amount {
-				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
-				sliced := util.GetCurrency(amount)
-				var (
-					c       *big.Int
-					exp     int32
-					coinErr error
-				)
-				if len(sliced) == 3 {
-					attrAmt.Currency = sliced[2]
-					c, exp, coinErr = util.GetCoin(sliced[1])
-				} else {
-					c, exp, coinErr = util.GetCoin(amount)
-				}
-				if coinErr != nil {
-					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
-				}
-				attrAmt.Text = amount
-				attrAmt.Numeric.Set(c)
-				attrAmt.Exp = exp
-				if attrAmt.Numeric.Cmp(&zero) != 0 {
-					rewards = append(rewards, attrAmt)
-				}
-			}
-		}
-	}
-
-	if len(rewards) == 0 {
-		return se, nil
-	}
-	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{
-			Amounts: rewards,
-			Account: shared.Account{ID: withdrawAddr},
-		}},
-	}
-
-	return se, nil
+	}, err
 }
 
 // StakingDelegateToSub transforms staking.MsgDelegate sdk messages to SubsetEvent
-func StakingDelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	d, ok := msg.(staking.MsgDelegate)
-	if !ok {
-		return se, errors.New("Not a delegate type")
+func StakingDelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	d := &staking.MsgDelegate{}
+	if err := proto.Unmarshal(msg, d); err != nil {
+		return se, errors.New("Not a delegate type" + err.Error())
 	}
-	se = shared.SubsetEvent{
+
+	return shared.SubsetEvent{
 		Type:   []string{"delegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
@@ -115,26 +53,23 @@ func StakingDelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEv
 				Text:     d.Amount.String(),
 			},
 		},
-	}
-
-	err = produceTransfers(&se, TransferTypeReward, logf)
-	return se, err
+	}, err
 }
 
 // StakingBeginRedelegateToSub transforms staking.MsgBeginRedelegate sdk messages to SubsetEvent
-func StakingBeginRedelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	br, ok := msg.(staking.MsgBeginRedelegate)
-	if !ok {
-		return se, errors.New("Not a begin_redelegate type")
+func StakingBeginRedelegateToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	br := &staking.MsgBeginRedelegate{}
+	if err := proto.Unmarshal(msg, br); err != nil {
+		return se, errors.New("Not a begin_redelegate type" + err.Error())
 	}
 
-	se = shared.SubsetEvent{
+	return shared.SubsetEvent{
 		Type:   []string{"begin_redelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator":             {{ID: br.DelegatorAddress.String()}},
-			"validator_destination": {{ID: br.ValidatorDstAddress.String()}},
-			"validator_source":      {{ID: br.ValidatorSrcAddress.String()}},
+			"delegator":             {{ID: br.DelegatorAddress}},
+			"validator_destination": {{ID: br.ValidatorDstAddress}},
+			"validator_source":      {{ID: br.ValidatorDstAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -143,17 +78,14 @@ func StakingBeginRedelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.S
 				Text:     br.Amount.String(),
 			},
 		},
-	}
-
-	err = produceTransfers(&se, TransferTypeReward, logf)
-	return se, err
+	}, err
 }
 
 // StakingCreateValidatorToSub transforms staking.MsgCreateValidator sdk messages to SubsetEvent
-func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgCreateValidator)
-	if !ok {
-		return se, errors.New("Not a create_validator type")
+func StakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgCreateValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, errors.New("Not a create_validator type" + err.Error())
 	}
 	return shared.SubsetEvent{
 		Type:   []string{"create_validator"},
@@ -198,10 +130,10 @@ func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error)
 }
 
 // StakingEditValidatorToSub transforms staking.MsgEditValidator sdk messages to SubsetEvent
-func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgEditValidator)
-	if !ok {
-		return se, errors.New("Not a edit_validator type")
+func StakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgEditValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, errors.New("Not a edit_validator type" + err.Error())
 	}
 	sev := shared.SubsetEvent{
 		Type:   []string{"edit_validator"},
