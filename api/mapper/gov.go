@@ -7,12 +7,13 @@ import (
 	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
+	"github.com/cosmos/cosmos-sdk/types"
 	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/gogo/protobuf/proto"
 )
 
 // GovDepositToSub transforms gov.MsgDeposit sdk messages to SubsetEvent
-func GovDepositToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func GovDepositToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	dep := &gov.MsgDeposit{}
 	if err := proto.Unmarshal(msg, dep); err != nil {
 		return se, errors.New("Not a deposit type" + err.Error())
@@ -52,7 +53,7 @@ func GovDepositToSub(msg []byte) (se shared.SubsetEvent, er error) {
 }
 
 // GovVoteToSub transforms gov.MsgVote sdk messages to SubsetEvent
-func GovVoteToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func GovVoteToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	vote := &gov.MsgVote{}
 	if err := proto.Unmarshal(msg, vote); err != nil {
 		return se, errors.New("Not a vote type" + err.Error())
@@ -70,7 +71,7 @@ func GovVoteToSub(msg []byte) (se shared.SubsetEvent, er error) {
 }
 
 // GovSubmitProposalToSub transforms gov.MsgSubmitProposal sdk messages to SubsetEvent
-func GovSubmitProposalToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func GovSubmitProposalToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	sp := &gov.MsgSubmitProposal{}
 	if err := proto.Unmarshal(msg, sp); err != nil {
 		return se, errors.New("Not a submit_proposal type" + err.Error())

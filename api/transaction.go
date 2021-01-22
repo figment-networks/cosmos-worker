@@ -13,17 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/figment-networks/cosmos-worker/api/mapper"
+	"github.com/figment-networks/indexer-manager/structs"
+
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	"github.com/figment-networks/cosmos-worker/api/mapper"
-	"github.com/figment-networks/indexer-manager/structs"
-	cStruct "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
-	"github.com/figment-networks/indexing-engine/metrics"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -129,6 +124,8 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 				ID: strconv.Itoa(index),
 			}
 
+			lg := findLog(resp.Logs, index)
+
 			var ev structs.SubsetEvent
 			var err error
 
@@ -136,9 +133,9 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "bank":
 				switch tPath[3] {
 				case "MsgSend":
-					ev, err = mapper.BankSendToSub(m.Value)
+					ev, err = mapper.BankSendToSub(m.Value, lg)
 				case "MsgMultiSend":
-					ev, err = mapper.BankMultisendToSub(m.Value)
+					ev, err = mapper.BankMultisendToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
 				}
@@ -152,11 +149,11 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "distribution":
 				switch tPath[3] {
 				case "MsgWithdrawValidatorCommission":
-					ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value)
+					ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value, lg)
 				case "MsgSetWithdrawAddress":
 					ev, err = mapper.DistributionSetWithdrawAddressToSub(m.Value)
 				case "MsgWithdrawDelegatorReward":
-					ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value)
+					ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value, lg)
 				case "MsgFundCommunityPool":
 					ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
 				default:
@@ -172,11 +169,11 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "gov":
 				switch tPath[3] {
 				case "MsgDeposit":
-					ev, err = mapper.GovDepositToSub(m.Value)
+					ev, err = mapper.GovDepositToSub(m.Value, lg)
 				case "MsgVote":
 					ev, err = mapper.GovVoteToSub(m.Value)
 				case "MsgSubmitProposal":
-					ev, err = mapper.GovSubmitProposalToSub(m.Value)
+					ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
 				}
@@ -190,15 +187,15 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "staking":
 				switch tPath[3] {
 				case "MsgUndelegate":
-					ev, err = mapper.StakingUndelegateToSub(m.Value)
+					ev, err = mapper.StakingUndelegateToSub(m.Value, lg)
 				case "MsgEditValidator":
 					ev, err = mapper.StakingEditValidatorToSub(m.Value)
 				case "MsgCreateValidator":
 					ev, err = mapper.StakingCreateValidatorToSub(m.Value)
 				case "MsgDelegate":
-					ev, err = mapper.StakingDelegateToSub(m.Value)
+					ev, err = mapper.StakingDelegateToSub(m.Value, lg)
 				case "MsgBeginRedelegate":
-					ev, err = mapper.StakingBeginRedelegateToSub(m.Value)
+					ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
 				}
@@ -241,6 +238,21 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 	}
 
 	return trans, nil
+}
+
+func findLog(logs types.ABCIMessageLogs, index int) types.ABCIMessageLog {
+	if len(logs) <= index {
+		return types.ABCIMessageLog{}
+	}
+	if lg := logs[index]; lg.GetMsgIndex() == uint32(index) {
+		return lg
+	}
+	for _, lg := range logs {
+		if lg.GetMsgIndex() == uint32(index) {
+			return lg
+		}
+	}
+	return types.ABCIMessageLog{}
 }
 
 /*

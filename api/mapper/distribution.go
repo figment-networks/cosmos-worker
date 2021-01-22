@@ -11,24 +11,27 @@ import (
 )
 
 // DistributionWithdrawValidatorCommissionToSub transforms distribution.MsgWithdrawValidatorCommission sdk messages to SubsetEvent
-func DistributionWithdrawValidatorCommissionToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func DistributionWithdrawValidatorCommissionToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	wvc := &distribution.MsgWithdrawValidatorCommission{}
 	if err := proto.Unmarshal(msg, wvc); err != nil {
 		return se, errors.New("Not a distribution type" + err.Error())
 	}
 
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"withdraw_validator_commission"},
 		Module: "distribution",
 		Node:   map[string][]shared.Account{"validator": {{ID: wvc.ValidatorAddress}}},
 		Recipient: []shared.EventTransfer{{
 			Account: shared.Account{ID: wvc.ValidatorAddress},
 		}},
-	}, nil
+	}
+
+	err = produceTransfers(&se, "send", "", lg)
+	return se, err
 }
 
 // DistributionSetWithdrawAddressToSub transforms distribution.MsgSetWithdrawAddress sdk messages to SubsetEvent
-func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	swa := &distribution.MsgSetWithdrawAddress{}
 	if err := proto.Unmarshal(msg, swa); err != nil {
 		return se, errors.New("Not a set_withdraw_address type" + err.Error())
@@ -45,13 +48,13 @@ func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, er 
 }
 
 // DistributionWithdrawDelegatorRewardToSub transforms distribution.MsgWithdrawDelegatorReward sdk messages to SubsetEvent
-func DistributionWithdrawDelegatorRewardToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func DistributionWithdrawDelegatorRewardToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	wdr := &distribution.MsgWithdrawDelegatorReward{}
 	if err := proto.Unmarshal(msg, wdr); err != nil {
 		return se, errors.New("Not a withdraw_validator_commission type" + err.Error())
 	}
 
-	return shared.SubsetEvent{
+	se = shared.SubsetEvent{
 		Type:   []string{"withdraw_delegator_reward"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
@@ -61,11 +64,14 @@ func DistributionWithdrawDelegatorRewardToSub(msg []byte) (se shared.SubsetEvent
 		Recipient: []shared.EventTransfer{{
 			Account: shared.Account{ID: wdr.ValidatorAddress},
 		}},
-	}, nil
+	}
+
+	err = produceTransfers(&se, "reward", "", lg)
+	return se, err
 }
 
 // DistributionFundCommunityPoolToSub transforms distribution.MsgFundCommunityPool sdk messages to SubsetEvent
-func DistributionFundCommunityPoolToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func DistributionFundCommunityPoolToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	fcp := &distribution.MsgFundCommunityPool{}
 	if err := proto.Unmarshal(msg, fcp); err != nil {
 		return se, errors.New("Not a fund_community_pool type" + err.Error())

@@ -12,7 +12,7 @@ import (
 )
 
 // BankMultisendToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
-func BankMultisendToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func BankMultisendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	multisend := &bank.MsgMultiSend{}
 	if err := proto.Unmarshal(msg, multisend); err != nil {
 		return se, errors.New("Not a multisend type" + err.Error())
@@ -38,12 +38,12 @@ func BankMultisendToSub(msg []byte) (se shared.SubsetEvent, er error) {
 		se.Recipient = append(se.Recipient, evt)
 	}
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, "send", "", lg)
 	return se, err
 }
 
 // BankSendToSub transforms bank.MsgSend sdk messages to SubsetEvent
-func BankSendToSub(msg []byte) (se shared.SubsetEvent, er error) {
+func BankSendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	send := &bank.MsgSend{}
 	if err := proto.Unmarshal(msg, send); err != nil {
 		return se, errors.New("Not a send type" + err.Error())
@@ -60,7 +60,7 @@ func BankSendToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	evt, _ = bankProduceEvTx(send.ToAddress, send.Amount)
 	se.Recipient = append(se.Recipient, evt)
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, "send", "", lg)
 	return se, err
 }
 
