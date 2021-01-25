@@ -36,9 +36,6 @@ type TxLogError struct {
 // SearchTx is making search api call
 func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block structs.Block, perPage uint64) (txs []structs.Transaction, err error) {
 
-	if err = c.rateLimiter.Wait(ctx); err != nil {
-		return nil, err
-	}
 	pag := &query.PageRequest{
 		CountTotal: true,
 		Limit:      perPage,
@@ -47,13 +44,19 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 	var page = uint64(1)
 	for {
 		pag.Offset = (perPage * page) - perPage
-
 		now := time.Now()
-		grpcRes, err := c.txServiceClient.GetTxsEvent(ctx, &tx.GetTxsEventRequest{
+
+		if err = c.rateLimiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+		nctx, cancel := context.WithTimeout(ctx, time.Second*10)
+
+		grpcRes, err := c.txServiceClient.GetTxsEvent(nctx, &tx.GetTxsEventRequest{
 			//Events: []string{"message.action=submit_evidence"},
 			Events:     []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
 			Pagination: pag,
 		})
+		cancel()
 
 		c.logger.Debug("[COSMOS-API] Request Time (/tx_search)", zap.Duration("duration", time.Now().Sub(now)))
 		if err != nil {
@@ -71,7 +74,6 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 			tx.BlockHash = block.Hash
 			tx.ChainID = block.ChainID
 			tx.Time = block.Time
-
 			txs = append(txs, tx)
 		}
 
