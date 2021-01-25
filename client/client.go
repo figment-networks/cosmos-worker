@@ -97,12 +97,11 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 			return
 		case taskRequest := <-stream.RequestListener:
 			receivedRequestsMetric.WithLabels(taskRequest.Type).Inc()
-			nCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 			switch taskRequest.Type {
 			case structs.ReqIDGetTransactions:
-				ic.GetTransactions(nCtx, taskRequest, stream, ic.httpClient)
+				ic.GetTransactions(ctx, taskRequest, stream, ic.httpClient)
 			case structs.ReqIDLatestData:
-				ic.GetLatest(nCtx, taskRequest, stream, ic.httpClient)
+				ic.GetLatest(ctx, taskRequest, stream, ic.httpClient)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -110,7 +109,6 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 					Final: true,
 				})
 			}
-			cancel()
 		}
 	}
 }
@@ -158,10 +156,9 @@ func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRe
 			Final: true,
 		})
 		ic.logger.Error("[COSMOS-CLIENT] Error getting range (Get Transactions) ", zap.Error(err), zap.Stringer("taskID", tr.Id))
+		close(out)
 		return
 	}
-
-	ic.logger.Debug("[COSMOS-CLIENT] Received all", zap.Stringer("taskID", tr.Id))
 	close(out)
 
 	for {
@@ -191,7 +188,7 @@ func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, 
 		return
 	}
 
-	sCtx, cancel := context.WithTimeout(ctx, time.Second*2)
+	sCtx, cancel := context.WithTimeout(ctx, time.Second*20)
 	defer cancel()
 
 	block, err := client.GetBlock(sCtx, *hr)
@@ -225,7 +222,7 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 	ldr := &structs.LatestDataRequest{}
 	err := json.Unmarshal(tr.Payload, ldr)
 	if err != nil {
-		stream.Send(cStructs.TaskResponse{Id: tr.Id, Error: cStructs.TaskError{Msg: "Cannot unmarshal payment"}, Final: true})
+		stream.Send(cStructs.TaskResponse{Id: tr.Id, Error: cStructs.TaskError{Msg: "Cannot unmarshal payload"}, Final: true})
 	}
 
 	sCtx, cancel := context.WithCancel(ctx)
@@ -238,40 +235,25 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 		return
 	}
 
-	ic.logger.Debug("[COSMOS-CLIENT] Get last block ", zap.Any("block", block), zap.Any("in", ldr))
-	startingHeight := getStartingHeight(ldr.LastHeight, ic.maximumHeightsToGet, block.Height)
-	out := make(chan cStructs.OutResp, page)
+	hr := getLastHeightRange(ldr.LastHeight, ic.maximumHeightsToGet, block.Height)
+
+	out := make(chan cStructs.OutResp, page*2+1)
 	fin := make(chan bool, 2)
+
 	// (lukanus): in separate goroutine take transaction format wrap it in transport message and send
 	go sendResp(sCtx, tr.Id, out, ic.logger, stream, fin)
 
-	var i uint64
-	for {
-		hr := structs.HeightRange{
-			StartHeight: startingHeight + i*(ic.bigPage),
-			EndHeight:   startingHeight + i*(ic.bigPage) + ic.bigPage - 1,
-		}
-		if hr.EndHeight > block.Height {
-			hr.EndHeight = block.Height
-		}
-
-		i++
-		if err := getRange(sCtx, ic.logger, client, hr, out); err != nil {
-			stream.Send(cStructs.TaskResponse{
-				Id:    tr.Id,
-				Error: cStructs.TaskError{Msg: err.Error()},
-				Final: true,
-			})
-			ic.logger.Error("[COSMOS-CLIENT] Error GettingRange from get latest ", zap.Error(err), zap.Stringer("taskID", tr.Id))
-			break
-		}
-
-		if block.Height == hr.EndHeight {
-			break
-		}
+	ic.logger.Debug("[COSMOS-CLIENT] Getting Range", zap.Stringer("taskID", tr.Id), zap.Uint64("start", hr.StartHeight), zap.Uint64("end", hr.EndHeight))
+	if err := getRange(sCtx, ic.logger, client, hr, out); err != nil {
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: err.Error()},
+			Final: true,
+		})
+		ic.logger.Error("[COSMOS-CLIENT] Error getting range (Get Transactions) ", zap.Error(err), zap.Stringer("taskID", tr.Id))
+		close(out)
+		return
 	}
-
-	ic.logger.Debug("[COSMOS-CLIENT] Received all", zap.Stringer("taskID", tr.Id))
 	close(out)
 
 	for {
@@ -285,24 +267,30 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 	}
 }
 
-// getStartingHeight - based current state
-func getStartingHeight(lastHeight, maximumHeightsToGet, blockHeightFromDB uint64) (startingHeight uint64) {
+// getLastHeightRange - based current state
+func getLastHeightRange(lastKnownHeight, maximumHeightsToGet, lastBlockFromNetwork uint64) structs.HeightRange {
 	// (lukanus): When nothing is scraped we want to get only X number of last requests
-	if lastHeight == 0 {
-		lastX := blockHeightFromDB - maximumHeightsToGet
+	if lastKnownHeight == 0 {
+		lastX := lastBlockFromNetwork - maximumHeightsToGet
 		if lastX > 0 {
-			return lastX
+			return structs.HeightRange{
+				StartHeight: lastX,
+				EndHeight:   lastBlockFromNetwork,
+			}
 		}
 	}
 
-	if maximumHeightsToGet < blockHeightFromDB-lastHeight {
-		if maximumHeightsToGet > blockHeightFromDB {
-			return 0
+	if maximumHeightsToGet < lastBlockFromNetwork-lastKnownHeight {
+		return structs.HeightRange{
+			StartHeight: lastBlockFromNetwork - maximumHeightsToGet,
+			EndHeight:   lastBlockFromNetwork,
 		}
-		return blockHeightFromDB - maximumHeightsToGet
 	}
 
-	return lastHeight
+	return structs.HeightRange{
+		StartHeight: lastKnownHeight,
+		EndHeight:   lastBlockFromNetwork,
+	}
 }
 
 func blockAndTx(ctx context.Context, client *api.Client, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
@@ -310,13 +298,18 @@ func blockAndTx(ctx context.Context, client *api.Client, height uint64) (block s
 	logger.Debug("[COSMOS-CLIENT] Getting block", zap.Uint64("block", height))
 	block, err = client.GetBlock(ctx, structs.HeightHash{Height: uint64(height)})
 	if err != nil {
+		logger.Debug("[COSMOS-CLIENT] bErr Getting txs", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", block.NumberOfTransactions))
 		return block, nil, fmt.Errorf("error fetching block: %d %w ", uint64(height), err)
 	}
 
 	if block.NumberOfTransactions > 0 {
 		logger.Debug("[COSMOS-CLIENT] Getting txs", zap.Uint64("block", height), zap.Uint64("txs", block.NumberOfTransactions))
 		txs, err = client.SearchTx(ctx, structs.HeightHash{Height: height}, block, page)
+
+		logger.Debug("[COSMOS-CLIENT] txErr Getting txs", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", block.NumberOfTransactions))
 	}
+
+	logger.Debug("[COSMOS-CLIENT] Got block", zap.Uint64("block", height), zap.Uint64("txs", block.NumberOfTransactions))
 	return block, txs, err
 }
 
@@ -324,6 +317,7 @@ func asyncBlockAndTx(ctx context.Context, client *api.Client, cinn chan hBTx) {
 	for in := range cinn {
 		b, txs, err := blockAndTx(ctx, client, in.Height)
 		if err != nil {
+
 			in.Ch <- cStructs.OutResp{
 				ID:    b.ID,
 				Error: err,
@@ -336,7 +330,6 @@ func asyncBlockAndTx(ctx context.Context, client *api.Client, cinn chan hBTx) {
 			Type:    "Block",
 			Payload: b,
 		}
-
 		if txs != nil {
 			for _, t := range txs {
 				in.Ch <- cStructs.OutResp{
@@ -360,24 +353,6 @@ type hBTx struct {
 	Ch     chan cStructs.OutResp
 }
 
-func populateRange(in, out chan hBTx, hr structs.HeightRange) {
-
-	height := hr.StartHeight
-
-	for {
-		hBTxO := hBTx{Height: height, Ch: oRespPool.Get()}
-		out <- hBTxO
-		in <- hBTxO
-		height++
-		if height >= hr.EndHeight {
-			out <- hBTx{Last: true}
-			break
-		}
-	}
-
-	close(in)
-}
-
 // getRange gets given range of blocks and transactions
 func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
 	defer logger.Sync()
@@ -385,10 +360,13 @@ func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr st
 	chIn := oHBTxPool.Get()
 	chOut := oHBTxPool.Get()
 
+	errored := make(chan bool, 7)
+	defer close(errored)
+
 	for i := 0; i < 5; i++ {
 		go asyncBlockAndTx(ctx, client, chIn)
 	}
-	go populateRange(chIn, chOut, hr)
+	go populateRange(chIn, chOut, hr, errored)
 
 RANGE_LOOP:
 	for {
@@ -396,6 +374,8 @@ RANGE_LOOP:
 		// (lukanus): add timeout
 		case o := <-chOut:
 			if o.Last {
+				logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("heigh", o.Height))
+				oRespPool.Put(o.Ch)
 				break RANGE_LOOP
 			}
 
@@ -407,6 +387,7 @@ RANGE_LOOP:
 				case "Partial":
 					break INNER_LOOP
 				case "Error":
+					errored <- true
 					out <- resp
 					break INNER_LOOP
 				default:
@@ -414,12 +395,42 @@ RANGE_LOOP:
 				}
 			}
 
-			logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("heigh", o.Height))
 			oRespPool.Put(o.Ch)
 		}
 	}
 	oHBTxPool.Put(chOut)
 	return nil
+}
+
+func populateRange(in, out chan hBTx, hr structs.HeightRange, er chan bool) {
+	height := hr.StartHeight
+
+	for {
+		hBTxO := hBTx{Height: height, Ch: oRespPool.Get()}
+		select {
+		case out <- hBTxO:
+		case <-er:
+			break
+		}
+
+		select {
+		case in <- hBTxO:
+		case <-er:
+			break
+		}
+
+		height++
+		if height >= hr.EndHeight {
+			select {
+			case out <- hBTx{Last: true}:
+			case <-er:
+			}
+			break
+		}
+
+	}
+
+	close(in)
 }
 
 // sendResp constructs protocol response and send it out to transport
@@ -482,79 +493,4 @@ SendLoop:
 		close(fin)
 	}
 
-}
-
-var (
-	oRespPool = NewOutRespPool(20)
-	oHBTxPool = NewHBTxPool(20)
-)
-
-type outRespPool struct {
-	stor chan chan cStructs.OutResp
-	lock sync.Mutex
-}
-
-func NewOutRespPool(cap int) *outRespPool {
-	return &outRespPool{
-		stor: make(chan chan cStructs.OutResp, cap),
-	}
-}
-
-func (o *outRespPool) Get() chan cStructs.OutResp {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	select {
-	case a := <-o.stor:
-		return a
-	default:
-	}
-
-	return make(chan cStructs.OutResp, 10)
-}
-
-func (o *outRespPool) Put(or chan cStructs.OutResp) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	select {
-	case o.stor <- or:
-	default:
-		close(or)
-	}
-
-	return
-}
-
-type hBTxPool struct {
-	stor chan chan hBTx
-	lock sync.Mutex
-}
-
-func NewHBTxPool(cap int) *hBTxPool {
-	return &hBTxPool{
-		stor: make(chan chan hBTx, cap),
-	}
-}
-
-func (o *hBTxPool) Get() chan hBTx {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	select {
-	case a := <-o.stor:
-		return a
-	default:
-	}
-
-	return make(chan hBTx, 10)
-}
-
-func (o *hBTxPool) Put(or chan hBTx) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-	select {
-	case o.stor <- or:
-	default:
-		close(or)
-	}
-
-	return
 }

@@ -108,7 +108,7 @@ func main() {
 		logger.Error(fmt.Errorf("cosmos grpc address is not set"))
 		return
 	}
-	grpcConn, dialErr := grpc.Dial(cfg.CosmosGRPCAddr, grpc.WithInsecure())
+	grpcConn, dialErr := grpc.DialContext(ctx, cfg.CosmosGRPCAddr, grpc.WithInsecure())
 	if dialErr != nil {
 		logger.Error(fmt.Errorf("error dialing grpc: %w", dialErr))
 		return

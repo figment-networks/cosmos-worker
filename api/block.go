@@ -43,9 +43,10 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 	}
 	n := time.Now()
 
+	nctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
 	if params.Height == 0 {
-
-		lb, err := c.tmServiceClient.GetLatestBlock(ctx, &tmservice.GetLatestBlockRequest{})
+		lb, err := c.tmServiceClient.GetLatestBlock(nctx, &tmservice.GetLatestBlockRequest{})
 		if err != nil {
 			rawRequestDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
 			return block, err
@@ -66,7 +67,7 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 		return block, nil
 	}
 
-	bbh, err := c.tmServiceClient.GetBlockByHeight(ctx, &tmservice.GetBlockByHeightRequest{Height: int64(params.Height)})
+	bbh, err := c.tmServiceClient.GetBlockByHeight(nctx, &tmservice.GetBlockByHeightRequest{Height: int64(params.Height)})
 	if err != nil {
 		rawRequestDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
 		return block, err
