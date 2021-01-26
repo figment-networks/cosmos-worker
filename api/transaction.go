@@ -129,16 +129,15 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 
 			var ev structs.SubsetEvent
 			var err error
-			var evKind string
 
 			switch tPath[1] {
 			case "bank":
 				switch tPath[3] {
 				case "MsgSend":
-					evKind = "send"
+					tev.Kind = "send"
 					ev, err = mapper.BankSendToSub(m.Value, lg)
 				case "MsgMultiSend":
-					evKind = "multisend"
+					tev.Kind = "multisend"
 					ev, err = mapper.BankMultisendToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -146,7 +145,7 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "crisis":
 				switch tPath[3] {
 				case "MsgVerifyInvariant":
-					evKind = "verify_invariant"
+					tev.Kind = "verify_invariant"
 					ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
 				default:
 					logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -154,16 +153,16 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "distribution":
 				switch tPath[3] {
 				case "MsgWithdrawValidatorCommission":
-					evKind = "withdraw_validator_commission"
+					tev.Kind = "withdraw_validator_commission"
 					ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value, lg)
 				case "MsgSetWithdrawAddress":
-					evKind = "set_withdraw_address"
+					tev.Kind = "set_withdraw_address"
 					ev, err = mapper.DistributionSetWithdrawAddressToSub(m.Value)
 				case "MsgWithdrawDelegatorReward":
-					evKind = "withdraw_delegator_reward"
+					tev.Kind = "withdraw_delegator_reward"
 					ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value, lg)
 				case "MsgFundCommunityPool":
-					evKind = "fund_community_pool"
+					tev.Kind = "fund_community_pool"
 					ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
 				default:
 					logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -171,7 +170,7 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "evidence":
 				switch tPath[3] {
 				case "MsgSubmitEvidence":
-					evKind = "submit_evidence"
+					tev.Kind = "submit_evidence"
 					ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
 				default:
 					logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -179,13 +178,13 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "gov":
 				switch tPath[3] {
 				case "MsgDeposit":
-					evKind = "deposit"
+					tev.Kind = "deposit"
 					ev, err = mapper.GovDepositToSub(m.Value, lg)
 				case "MsgVote":
-					evKind = "vote"
+					tev.Kind = "vote"
 					ev, err = mapper.GovVoteToSub(m.Value)
 				case "MsgSubmitProposal":
-					evKind = "submit_proposal"
+					tev.Kind = "submit_proposal"
 					ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -193,7 +192,7 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "slashing":
 				switch tPath[3] {
 				case "MsgUnjail":
-					evKind = "unjail"
+					tev.Kind = "unjail"
 					ev, err = mapper.SlashingUnjailToSub(m.Value)
 				default:
 					logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -201,19 +200,19 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			case "staking":
 				switch tPath[3] {
 				case "MsgUndelegate":
-					evKind = "begin_unbonding"
+					tev.Kind = "begin_unbonding"
 					ev, err = mapper.StakingUndelegateToSub(m.Value, lg)
 				case "MsgEditValidator":
-					evKind = "edit_validator"
+					tev.Kind = "edit_validator"
 					ev, err = mapper.StakingEditValidatorToSub(m.Value)
 				case "MsgCreateValidator":
-					evKind = "create_validator"
+					tev.Kind = "create_validator"
 					ev, err = mapper.StakingCreateValidatorToSub(m.Value)
 				case "MsgDelegate":
-					evKind = "delegate"
+					tev.Kind = "delegate"
 					ev, err = mapper.StakingDelegateToSub(m.Value, lg)
 				case "MsgBeginRedelegate":
-					evKind = "begin_redelegate"
+					tev.Kind = "begin_redelegate"
 					ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
 				default:
 					logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
@@ -223,7 +222,6 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			}
 
 			if len(ev.Type) > 0 {
-				tev.Kind = evKind
 				tev.Sub = append(tev.Sub, ev)
 			}
 
