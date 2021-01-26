@@ -112,6 +112,10 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			// tPath is "/cosmos.bank.v1beta1.MsgSend"
 			tPath := strings.Split(m.TypeUrl, ".")
 
+			if len(tPath) == 5 && tPath[0] == "/ibc" {
+				continue
+			}
+
 			if len(tPath) != 4 {
 				return trans, errors.New("TypeURL is in wrong format")
 			}
