@@ -125,11 +125,12 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 				msgType = tPath[3]
 				err = addSubEvent(tPath[1], msgType, &tev, m, lg, logger)
 			} else {
-				return trans, fmt.Errorf("TypeURL is in wrong format: %v", m.TypeUrl)
+				err = fmt.Errorf("TypeURL is in wrong format: %v", m.TypeUrl)
 			}
 
 			if err != nil {
 				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+				return trans, err
 			}
 
 			trans.Events = append(trans.Events, tev)
