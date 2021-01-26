@@ -2,13 +2,9 @@ package api
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"math/big"
-	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +12,7 @@ import (
 	"github.com/figment-networks/cosmos-worker/api/mapper"
 	"github.com/figment-networks/indexer-manager/structs"
 
+	codec_types "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/cosmos/cosmos-sdk/types/tx"
@@ -109,127 +106,28 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 		trans.Memo = in.Body.Memo
 
 		for index, m := range in.Body.Messages {
-			// tPath is "/cosmos.bank.v1beta1.MsgSend"
-			tPath := strings.Split(m.TypeUrl, ".")
-
-			if len(tPath) == 5 && tPath[0] == "/ibc" {
-				continue
-			}
-
-			if len(tPath) != 4 {
-				return trans, errors.New("TypeURL is in wrong format")
-			}
-
-			if tPath[0] != "/cosmos" {
-				return trans, errors.New("TypeURL is not cosmos type")
-			}
-
 			tev := structs.TransactionEvent{
 				ID: strconv.Itoa(index),
 			}
-
 			lg := findLog(resp.Logs, index)
 
-			var ev structs.SubsetEvent
+			// tPath is "/cosmos.bank.v1beta1.MsgSend" or "/ibc.core.client.v1.MsgCreateClient"
+			tPath := strings.Split(m.TypeUrl, ".")
+
 			var err error
-
-			switch tPath[1] {
-			case "bank":
-				switch tPath[3] {
-				case "MsgSend":
-					tev.Kind = "send"
-					ev, err = mapper.BankSendToSub(m.Value, lg)
-				case "MsgMultiSend":
-					tev.Kind = "multisend"
-					ev, err = mapper.BankMultisendToSub(m.Value, lg)
-				default:
-					logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "crisis":
-				switch tPath[3] {
-				case "MsgVerifyInvariant":
-					tev.Kind = "verify_invariant"
-					ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
-				default:
-					logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "distribution":
-				switch tPath[3] {
-				case "MsgWithdrawValidatorCommission":
-					tev.Kind = "withdraw_validator_commission"
-					ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value, lg)
-				case "MsgSetWithdrawAddress":
-					tev.Kind = "set_withdraw_address"
-					ev, err = mapper.DistributionSetWithdrawAddressToSub(m.Value)
-				case "MsgWithdrawDelegatorReward":
-					tev.Kind = "withdraw_delegator_reward"
-					ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value, lg)
-				case "MsgFundCommunityPool":
-					tev.Kind = "fund_community_pool"
-					ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
-				default:
-					logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "evidence":
-				switch tPath[3] {
-				case "MsgSubmitEvidence":
-					tev.Kind = "submit_evidence"
-					ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
-				default:
-					logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "gov":
-				switch tPath[3] {
-				case "MsgDeposit":
-					tev.Kind = "deposit"
-					ev, err = mapper.GovDepositToSub(m.Value, lg)
-				case "MsgVote":
-					tev.Kind = "vote"
-					ev, err = mapper.GovVoteToSub(m.Value)
-				case "MsgSubmitProposal":
-					tev.Kind = "submit_proposal"
-					ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
-				default:
-					logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "slashing":
-				switch tPath[3] {
-				case "MsgUnjail":
-					tev.Kind = "unjail"
-					ev, err = mapper.SlashingUnjailToSub(m.Value)
-				default:
-					logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			case "staking":
-				switch tPath[3] {
-				case "MsgUndelegate":
-					tev.Kind = "begin_unbonding"
-					ev, err = mapper.StakingUndelegateToSub(m.Value, lg)
-				case "MsgEditValidator":
-					tev.Kind = "edit_validator"
-					ev, err = mapper.StakingEditValidatorToSub(m.Value)
-				case "MsgCreateValidator":
-					tev.Kind = "create_validator"
-					ev, err = mapper.StakingCreateValidatorToSub(m.Value)
-				case "MsgDelegate":
-					tev.Kind = "delegate"
-					ev, err = mapper.StakingDelegateToSub(m.Value, lg)
-				case "MsgBeginRedelegate":
-					tev.Kind = "begin_redelegate"
-					ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
-				default:
-					logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
-				}
-			default:
-				logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", tPath[3]), zap.String("type", m.TypeUrl))
-			}
-
-			if len(ev.Type) > 0 {
-				tev.Sub = append(tev.Sub, ev)
+			var msgType string
+			if len(tPath) == 5 && tPath[0] == "/ibc" {
+				msgType = tPath[4]
+				err = addIBCSubEvent(tPath[2], msgType, &tev, m, lg, logger)
+			} else if len(tPath) == 4 && tPath[0] == "/cosmos" {
+				msgType = tPath[3]
+				err = addSubEvent(tPath[1], msgType, &tev, m, lg, logger)
+			} else {
+				return trans, fmt.Errorf("TypeURL is in wrong format: %v", m.TypeUrl)
 			}
 
 			if err != nil {
-				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", tPath[3]), zap.String("route", m.TypeUrl))
+				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
 			}
 
 			trans.Events = append(trans.Events, tev)
@@ -273,6 +171,161 @@ func findLog(logs types.ABCIMessageLogs, index int) types.ABCIMessageLog {
 		}
 	}
 	return types.ABCIMessageLog{}
+}
+
+func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog, logger *zap.Logger) (err error) {
+	var ev structs.SubsetEvent
+	switch msgRoute {
+	case "bank":
+		switch msgType {
+		case "MsgSend":
+			tev.Kind = "send"
+			ev, err = mapper.BankSendToSub(m.Value, lg)
+		case "MsgMultiSend":
+			tev.Kind = "multisend"
+			ev, err = mapper.BankMultisendToSub(m.Value, lg)
+		default:
+			logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "crisis":
+		switch msgType {
+		case "MsgVerifyInvariant":
+			tev.Kind = "verify_invariant"
+			ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "distribution":
+		switch msgType {
+		case "MsgWithdrawValidatorCommission":
+			tev.Kind = "withdraw_validator_commission"
+			ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value, lg)
+		case "MsgSetWithdrawAddress":
+			tev.Kind = "set_withdraw_address"
+			ev, err = mapper.DistributionSetWithdrawAddressToSub(m.Value)
+		case "MsgWithdrawDelegatorReward":
+			tev.Kind = "withdraw_delegator_reward"
+			ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value, lg)
+		case "MsgFundCommunityPool":
+			tev.Kind = "fund_community_pool"
+			ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "evidence":
+		switch msgType {
+		case "MsgSubmitEvidence":
+			tev.Kind = "submit_evidence"
+			ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "gov":
+		switch msgType {
+		case "MsgDeposit":
+			tev.Kind = "deposit"
+			ev, err = mapper.GovDepositToSub(m.Value, lg)
+		case "MsgVote":
+			tev.Kind = "vote"
+			ev, err = mapper.GovVoteToSub(m.Value)
+		case "MsgSubmitProposal":
+			tev.Kind = "submit_proposal"
+			ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
+		default:
+			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "slashing":
+		switch msgType {
+		case "MsgUnjail":
+			tev.Kind = "unjail"
+			ev, err = mapper.SlashingUnjailToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	case "staking":
+		switch msgType {
+		case "MsgUndelegate":
+			tev.Kind = "begin_unbonding"
+			ev, err = mapper.StakingUndelegateToSub(m.Value, lg)
+		case "MsgEditValidator":
+			tev.Kind = "edit_validator"
+			ev, err = mapper.StakingEditValidatorToSub(m.Value)
+		case "MsgCreateValidator":
+			tev.Kind = "create_validator"
+			ev, err = mapper.StakingCreateValidatorToSub(m.Value)
+		case "MsgDelegate":
+			tev.Kind = "delegate"
+			ev, err = mapper.StakingDelegateToSub(m.Value, lg)
+		case "MsgBeginRedelegate":
+			tev.Kind = "begin_redelegate"
+			ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
+		default:
+			logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+	default:
+		logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", msgType), zap.String("type", m.TypeUrl))
+	}
+
+	if len(ev.Type) > 0 {
+		tev.Sub = append(tev.Sub, ev)
+	}
+	return err
+}
+
+func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog, logger *zap.Logger) (err error) {
+	var ev structs.SubsetEvent
+
+	switch msgRoute {
+	case "client":
+		switch msgType {
+		case "MsgCreateClient":
+			tev.Kind = "create_client"
+			ev, err = mapper.IBCCreateClientToSub(m.Value)
+		case "MsgUpdateClient":
+			tev.Kind = "update_client"
+			ev, err = mapper.IBCCreateClientToSub(m.Value)
+		case "MsgUpgradeClient":
+			tev.Kind = "upgrade_client"
+			ev, err = mapper.IBCCreateClientToSub(m.Value)
+		case "MsgSubmitMisbehaviour":
+			tev.Kind = "submit_misbehaviour"
+			ev, err = mapper.IBCCreateClientToSub(m.Value)
+		}
+	case "connection":
+		switch msgType {
+		case "MsgConnectionOpenInit":
+			tev.Kind = "connection_open_init"
+			ev, err = mapper.IBCConnectionOpenInitToSub(m.Value)
+		case "MsgConnectionOpenConfirm":
+			tev.Kind = "connection_open_confirm"
+			ev, err = mapper.IBCConnectionOpenConfirmToSub(m.Value)
+		case "MsgConnectionOpenAck":
+			tev.Kind = "connection_open_ack"
+			ev, err = mapper.IBCConnectionOpenAckToSub(m.Value)
+		case "MsgConnectionOpenTry":
+			tev.Kind = "connection_open_try"
+			ev, err = mapper.IBCConnectionOpenTryToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+
+	case "channel":
+		switch msgType {
+		case "MsgChannelOpenInit":
+			tev.Kind = "channel_open_init"
+			ev, err = mapper.IBCChannelOpenInitToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+		}
+
+	default:
+		logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", msgType), zap.String("type", m.TypeUrl))
+	}
+
+	if len(ev.Type) > 0 {
+		tev.Sub = append(tev.Sub, ev)
+	}
+	return err
 }
 
 /*
