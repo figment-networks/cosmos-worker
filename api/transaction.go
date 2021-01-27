@@ -182,10 +182,8 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "bank":
 		switch msgType {
 		case "MsgSend":
-			tev.Kind = "send"
 			ev, err = mapper.BankSendToSub(m.Value, lg)
 		case "MsgMultiSend":
-			tev.Kind = "multisend"
 			ev, err = mapper.BankMultisendToSub(m.Value, lg)
 		default:
 			logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -193,7 +191,6 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "crisis":
 		switch msgType {
 		case "MsgVerifyInvariant":
-			tev.Kind = "verify_invariant"
 			ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -201,16 +198,12 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "distribution":
 		switch msgType {
 		case "MsgWithdrawValidatorCommission":
-			tev.Kind = "withdraw_validator_commission"
 			ev, err = mapper.DistributionWithdrawValidatorCommissionToSub(m.Value, lg)
 		case "MsgSetWithdrawAddress":
-			tev.Kind = "set_withdraw_address"
 			ev, err = mapper.DistributionSetWithdrawAddressToSub(m.Value)
 		case "MsgWithdrawDelegatorReward":
-			tev.Kind = "withdraw_delegator_reward"
 			ev, err = mapper.DistributionWithdrawDelegatorRewardToSub(m.Value, lg)
 		case "MsgFundCommunityPool":
-			tev.Kind = "fund_community_pool"
 			ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -218,7 +211,6 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "evidence":
 		switch msgType {
 		case "MsgSubmitEvidence":
-			tev.Kind = "submit_evidence"
 			ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -226,13 +218,10 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "gov":
 		switch msgType {
 		case "MsgDeposit":
-			tev.Kind = "deposit"
 			ev, err = mapper.GovDepositToSub(m.Value, lg)
 		case "MsgVote":
-			tev.Kind = "vote"
 			ev, err = mapper.GovVoteToSub(m.Value)
 		case "MsgSubmitProposal":
-			tev.Kind = "submit_proposal"
 			ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
 		default:
 			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -240,7 +229,6 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "slashing":
 		switch msgType {
 		case "MsgUnjail":
-			tev.Kind = "unjail"
 			ev, err = mapper.SlashingUnjailToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -248,19 +236,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	case "staking":
 		switch msgType {
 		case "MsgUndelegate":
-			tev.Kind = "begin_unbonding"
 			ev, err = mapper.StakingUndelegateToSub(m.Value, lg)
 		case "MsgEditValidator":
-			tev.Kind = "edit_validator"
 			ev, err = mapper.StakingEditValidatorToSub(m.Value)
 		case "MsgCreateValidator":
-			tev.Kind = "create_validator"
 			ev, err = mapper.StakingCreateValidatorToSub(m.Value)
 		case "MsgDelegate":
-			tev.Kind = "delegate"
 			ev, err = mapper.StakingDelegateToSub(m.Value, lg)
 		case "MsgBeginRedelegate":
-			tev.Kind = "begin_redelegate"
 			ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
 		default:
 			logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -271,6 +254,7 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 
 	if len(ev.Type) > 0 {
 		tev.Sub = append(tev.Sub, ev)
+		tev.Kind = ev.Type[0]
 	}
 	return err
 }
@@ -282,31 +266,23 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 	case "client":
 		switch msgType {
 		case "MsgCreateClient":
-			tev.Kind = "create_client"
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		case "MsgUpdateClient":
-			tev.Kind = "update_client"
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		case "MsgUpgradeClient":
-			tev.Kind = "upgrade_client"
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		case "MsgSubmitMisbehaviour":
-			tev.Kind = "submit_misbehaviour"
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		}
 	case "connection":
 		switch msgType {
 		case "MsgConnectionOpenInit":
-			tev.Kind = "connection_open_init"
 			ev, err = mapper.IBCConnectionOpenInitToSub(m.Value)
 		case "MsgConnectionOpenConfirm":
-			tev.Kind = "connection_open_confirm"
 			ev, err = mapper.IBCConnectionOpenConfirmToSub(m.Value)
 		case "MsgConnectionOpenAck":
-			tev.Kind = "connection_open_ack"
 			ev, err = mapper.IBCConnectionOpenAckToSub(m.Value)
 		case "MsgConnectionOpenTry":
-			tev.Kind = "connection_open_try"
 			ev, err = mapper.IBCConnectionOpenTryToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -315,7 +291,6 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 	case "channel":
 		switch msgType {
 		case "MsgChannelOpenInit":
-			tev.Kind = "channel_open_init"
 			ev, err = mapper.IBCChannelOpenInitToSub(m.Value)
 		default:
 			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
@@ -327,6 +302,7 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 
 	if len(ev.Type) > 0 {
 		tev.Sub = append(tev.Sub, ev)
+		tev.Kind = ev.Type[0]
 	}
 	return err
 }
