@@ -15,7 +15,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/figment-networks/cosmos-worker/api"
-	"github.com/figment-networks/cosmos-worker/cmd/common/logger"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 )
 
@@ -38,6 +37,10 @@ type LCD interface {
 	GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error)
 }
 
+type OutputSender interface {
+	Send(cStructs.TaskResponse) error
+}
+
 // IndexerClient is implementation of a client (main worker code)
 type IndexerClient struct {
 	rpcCli RPC
@@ -47,12 +50,11 @@ type IndexerClient struct {
 	streams map[uuid.UUID]*cStructs.StreamAccess
 	sLock   sync.Mutex
 
-	bigPage             uint64
 	maximumHeightsToGet uint64
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCli LCD, bigPage, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCli LCD, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -62,7 +64,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCl
 		logger:              logger,
 		rpcCli:              rpcCli,
 		lcdCli:              lcdCli,
-		bigPage:             bigPage,
+		httpClient:          cClient,
 		maximumHeightsToGet: maximumHeightsToGet,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
 	}
@@ -110,12 +112,13 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 		case taskRequest := <-stream.RequestListener:
 			fmt.Println("[IndexerClient] recieved task request")
 			receivedRequestsMetric.WithLabels(taskRequest.Type).Inc()
+			tctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 			switch taskRequest.Type {
 			case structs.ReqIDGetTransactions:
 				ic.GetReward(nCtx, taskRequest, stream, ic.lcdCli)
-				ic.GetTransactions(nCtx, taskRequest, stream, ic.rpcCli)
+				ic.GetTransactions(tctx, taskRequest, stream, ic.httpClient)
 			case structs.ReqIDLatestData:
-				ic.GetLatest(nCtx, taskRequest, stream, ic.rpcCli)
+				ic.GetLatest(tctx, taskRequest, stream, ic.httpClient)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -123,13 +126,13 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 					Final: true,
 				})
 			}
+			cancel()
 		}
 	}
 }
 
 // GetTransactions gets new transactions and blocks from cosmos for given range
-// it slice requests for batch up to the `bigPage` count
-func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client RPC) {
+func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream OutputSender, client *api.Client) {
 	timer := metrics.NewTimer(getTransactionDuration)
 	defer timer.ObserveDuration()
 
@@ -177,10 +180,10 @@ func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRe
 
 	for {
 		select {
-		case <-sCtx.Done():
+		case <-ctx.Done():
 			return
 		case <-fin:
-			ic.logger.Debug("[COSMOS-CLIENT] Finished sending all", zap.Stringer("taskID", tr.Id))
+			ic.logger.Debug("[COSMOS-CLIENT] Finished sending all", zap.Stringer("taskID", tr.Id), zap.Any("heights", hr))
 			return
 		}
 	}
@@ -316,7 +319,7 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 		case <-sCtx.Done():
 			return
 		case <-fin:
-			ic.logger.Debug("[COSMOS-CLIENT] Finished sending all", zap.Stringer("taskID", tr.Id))
+			ic.logger.Debug("[COSMOS-CLIENT] Finished sending all", zap.Stringer("taskID", tr.Id), zap.Any("heights", hr))
 			return
 		}
 	}
@@ -348,12 +351,12 @@ func getLastHeightRange(lastKnownHeight, maximumHeightsToGet, lastBlockFromNetwo
 	}
 }
 
-func blockAndTx(ctx context.Context, client *api.Client, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
-
+func blockAndTx(ctx context.Context, logger *zap.Logger, client *api.Client, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
+	defer logger.Sync()
 	logger.Debug("[COSMOS-CLIENT] Getting block", zap.Uint64("block", height))
 	block, err = client.GetBlock(ctx, structs.HeightHash{Height: uint64(height)})
 	if err != nil {
-		logger.Debug("[COSMOS-CLIENT] bErr Getting txs", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", block.NumberOfTransactions))
+		logger.Debug("[COSMOS-CLIENT] Err Getting block", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", block.NumberOfTransactions))
 		return block, nil, fmt.Errorf("error fetching block: %d %w ", uint64(height), err)
 	}
 
@@ -368,11 +371,11 @@ func blockAndTx(ctx context.Context, client *api.Client, height uint64) (block s
 	return block, txs, err
 }
 
-func asyncBlockAndTx(ctx context.Context, client *api.Client, cinn chan hBTx) {
+func asyncBlockAndTx(ctx context.Context, logger *zap.Logger, wg *sync.WaitGroup, client *api.Client, cinn chan hBTx) {
+	defer wg.Done()
 	for in := range cinn {
-		b, txs, err := blockAndTx(ctx, client, in.Height)
+		b, txs, err := blockAndTx(ctx, logger, client, in.Height)
 		if err != nil {
-
 			in.Ch <- cStructs.OutResp{
 				ID:    b.ID,
 				Error: err,
@@ -409,7 +412,7 @@ type hBTx struct {
 }
 
 // getRange gets given range of blocks and transactions
-func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) error {
+func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) (err error) {
 	defer logger.Sync()
 
 	chIn := oHBTxPool.Get()
@@ -418,8 +421,10 @@ func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr st
 	errored := make(chan bool, 7)
 	defer close(errored)
 
+	wg := &sync.WaitGroup{}
 	for i := 0; i < 5; i++ {
-		go asyncBlockAndTx(ctx, client, chIn)
+		wg.Add(1)
+		go asyncBlockAndTx(ctx, logger, wg, client, chIn)
 	}
 	go populateRange(chIn, chOut, hr, errored)
 
@@ -430,31 +435,51 @@ RANGE_LOOP:
 		case o := <-chOut:
 			if o.Last {
 				logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("heigh", o.Height))
-				oRespPool.Put(o.Ch)
 				break RANGE_LOOP
 			}
 
-			logger.Debug("[COSMOS-CLIENT] Sending height", zap.Uint64("heigh", o.Height))
 		INNER_LOOP:
 			for resp := range o.Ch {
-				logger.Debug("[COSMOS-CLIENT] got height", zap.Any("a", resp))
 				switch resp.Type {
 				case "Partial":
 					break INNER_LOOP
 				case "Error":
-					errored <- true
+					errored <- true // (lukanus): to close publisher and asyncBlockAndTx
+					err = resp.Error
 					out <- resp
-					break INNER_LOOP
+					break RANGE_LOOP
 				default:
 					out <- resp
 				}
 			}
-
 			oRespPool.Put(o.Ch)
 		}
 	}
+
+	if err != nil { // (lukanus): discard everything on error, after error
+		wg.Wait() // (lukanus): make sure there are no outstanging producers
+	PURIFY_CHANNELS:
+		for {
+			select {
+			case o := <-chOut:
+				if o.Ch != nil {
+				PURIFY_INNER_CHANNELS:
+					for {
+						select {
+						case <-o.Ch:
+						default:
+							break PURIFY_INNER_CHANNELS
+						}
+					}
+				}
+				oRespPool.Put(o.Ch)
+			default:
+				break PURIFY_CHANNELS
+			}
+		}
+	}
 	oHBTxPool.Put(chOut)
-	return nil
+	return err
 }
 
 func populateRange(in, out chan hBTx, hr structs.HeightRange, er chan bool) {
@@ -475,7 +500,7 @@ func populateRange(in, out chan hBTx, hr structs.HeightRange, er chan bool) {
 		}
 
 		height++
-		if height >= hr.EndHeight {
+		if height > hr.EndHeight {
 			select {
 			case out <- hBTx{Last: true}:
 			case <-er:
@@ -484,12 +509,11 @@ func populateRange(in, out chan hBTx, hr structs.HeightRange, er chan bool) {
 		}
 
 	}
-
 	close(in)
 }
 
 // sendResp constructs protocol response and send it out to transport
-func sendResp(ctx context.Context, id uuid.UUID, in <-chan cStructs.OutResp, logger *zap.Logger, stream *cStructs.StreamAccess, fin chan bool) {
+func sendResp(ctx context.Context, id uuid.UUID, in <-chan cStructs.OutResp, logger *zap.Logger, sender OutputSender, fin chan bool) {
 	b := &bytes.Buffer{}
 	enc := json.NewEncoder(b)
 	order := uint64(0)
@@ -522,7 +546,7 @@ SendLoop:
 
 			b.Read(tr.Payload)
 			order++
-			err = stream.Send(tr)
+			err = sender.Send(tr)
 			if err != nil {
 				logger.Error("[COSMOS-CLIENT] Error sending data", zap.Error(err))
 			}
@@ -530,7 +554,7 @@ SendLoop:
 		}
 	}
 
-	err := stream.Send(cStructs.TaskResponse{
+	err := sender.Send(cStructs.TaskResponse{
 		Id:    id,
 		Type:  "END",
 		Order: order,

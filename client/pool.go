@@ -28,18 +28,18 @@ func (o *outRespPool) Get() chan cStructs.OutResp {
 	defer o.lock.Unlock()
 	select {
 	case a := <-o.stor:
+		// (lukanus): better safe than sorry
 		outRespDrain(a)
 		return a
 	default:
 	}
 
-	return make(chan cStructs.OutResp, 10)
+	return make(chan cStructs.OutResp, 1000)
 }
 
 func (o *outRespPool) Put(or chan cStructs.OutResp) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	// (lukanus): better safe than sorry
 	select {
 	case o.stor <- or:
 	default:
@@ -66,6 +66,7 @@ func (o *hBTxPool) Get() chan hBTx {
 	defer o.lock.Unlock()
 	select {
 	case a := <-o.stor:
+		// (lukanus): better safe than sorry
 		hBTxDrain(a)
 		return a
 	default:
@@ -77,7 +78,6 @@ func (o *hBTxPool) Get() chan hBTx {
 func (o *hBTxPool) Put(or chan hBTx) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	// (lukanus): better safe than sorry
 	select {
 	case o.stor <- or:
 	default:

@@ -118,7 +118,7 @@ func main() {
 	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond))
 
 	grpcServer := grpc.NewServer()
-	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.BigPage), uint64(cfg.MaximumHeightsToGet))
+	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.MaximumHeightsToGet))
 
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())
 	grpcProtoIndexer.RegisterIndexerServiceServer(grpcServer, worker)

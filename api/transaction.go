@@ -24,6 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // TxLogError Error message
@@ -49,13 +50,12 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 		if err = c.rateLimiter.Wait(ctx); err != nil {
 			return nil, err
 		}
-		nctx, cancel := context.WithTimeout(ctx, time.Second*10)
 
+		nctx, cancel := context.WithTimeout(ctx, time.Second*10)
 		grpcRes, err := c.txServiceClient.GetTxsEvent(nctx, &tx.GetTxsEventRequest{
-			//Events: []string{"message.action=submit_evidence"},
 			Events:     []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
 			Pagination: pag,
-		})
+		}, grpc.WaitForReady(true))
 		cancel()
 
 		c.logger.Debug("[COSMOS-API] Request Time (/tx_search)", zap.Duration("duration", time.Now().Sub(now)))

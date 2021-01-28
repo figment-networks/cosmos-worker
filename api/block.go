@@ -10,6 +10,7 @@ import (
 	"github.com/figment-networks/cosmos-worker/api/types"
 	"github.com/figment-networks/indexer-manager/structs"
 	"github.com/tendermint/tendermint/libs/bytes"
+	"google.golang.org/grpc"
 )
 
 // BlocksMap map of blocks to control block map
@@ -46,6 +47,7 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 
 	nctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
+	//nctx := context.Background()
 	if params.Height == 0 {
 		lb, err := c.tmServiceClient.GetLatestBlock(nctx, &tmservice.GetLatestBlockRequest{})
 		if err != nil {
@@ -68,7 +70,7 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 		return block, nil
 	}
 
-	bbh, err := c.tmServiceClient.GetBlockByHeight(nctx, &tmservice.GetBlockByHeightRequest{Height: int64(params.Height)})
+	bbh, err := c.tmServiceClient.GetBlockByHeight(nctx, &tmservice.GetBlockByHeightRequest{Height: int64(params.Height)}, grpc.WaitForReady(true))
 	if err != nil {
 		rawRequestDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
 		return block, err
