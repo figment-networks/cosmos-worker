@@ -3,7 +3,6 @@ package mapper
 import (
 	"errors"
 
-	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	"github.com/cosmos/cosmos-sdk/types"

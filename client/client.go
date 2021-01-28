@@ -28,9 +28,8 @@ var (
 )
 
 type RPC interface {
-	GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, err error)
-	GetBlocksMeta(ctx context.Context, params structs.HeightRange, blocks *api.BlocksMap, end chan<- error)
-	SearchTx(ctx context.Context, r structs.HeightRange, blocks map[uint64]structs.Block, out chan cStructs.OutResp, page, perPage int, fin chan string)
+	GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, er error)
+	SearchTx(ctx context.Context, r structs.HeightHash, block structs.Block, perPage uint64) (txs []structs.Transaction, err error)
 }
 
 type LCD interface {
@@ -43,8 +42,7 @@ type OutputSender interface {
 
 // IndexerClient is implementation of a client (main worker code)
 type IndexerClient struct {
-	rpcCli RPC
-	lcdCli LCD
+	grpcCli RPC
 
 	logger  *zap.Logger
 	streams map[uuid.UUID]*cStructs.StreamAccess
@@ -54,7 +52,7 @@ type IndexerClient struct {
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCli LCD, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpcCli RPC, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -62,9 +60,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, rpcCli RPC, lcdCl
 
 	return &IndexerClient{
 		logger:              logger,
-		rpcCli:              rpcCli,
-		lcdCli:              lcdCli,
-		httpClient:          cClient,
+		grpcCli:             grpcCli,
 		maximumHeightsToGet: maximumHeightsToGet,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
 	}
@@ -110,15 +106,13 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 		case <-stream.Finish:
 			return
 		case taskRequest := <-stream.RequestListener:
-			fmt.Println("[IndexerClient] recieved task request")
 			receivedRequestsMetric.WithLabels(taskRequest.Type).Inc()
 			tctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 			switch taskRequest.Type {
 			case structs.ReqIDGetTransactions:
-				ic.GetReward(nCtx, taskRequest, stream, ic.lcdCli)
-				ic.GetTransactions(tctx, taskRequest, stream, ic.httpClient)
+				ic.GetTransactions(tctx, taskRequest, stream, ic.grpcCli)
 			case structs.ReqIDLatestData:
-				ic.GetLatest(tctx, taskRequest, stream, ic.httpClient)
+				ic.GetLatest(tctx, taskRequest, stream, ic.grpcCli)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -132,7 +126,7 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 }
 
 // GetTransactions gets new transactions and blocks from cosmos for given range
-func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream OutputSender, client *api.Client) {
+func (ic *IndexerClient) GetTransactions(ctx context.Context, tr cStructs.TaskRequest, stream OutputSender, client RPC) {
 	timer := metrics.NewTimer(getTransactionDuration)
 	defer timer.ObserveDuration()
 
@@ -302,7 +296,7 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 	go sendResp(sCtx, tr.Id, out, ic.logger, stream, fin)
 
 	ic.logger.Debug("[COSMOS-CLIENT] Getting Range", zap.Stringer("taskID", tr.Id), zap.Uint64("start", hr.StartHeight), zap.Uint64("end", hr.EndHeight))
-	if err := getRange(sCtx, ic.logger, client, hr, out); err != nil {
+	if err := getRange(sCtx, ic.logger, ic.grpcCli, hr, out); err != nil {
 		stream.Send(cStructs.TaskResponse{
 			Id:    tr.Id,
 			Error: cStructs.TaskError{Msg: err.Error()},
@@ -351,7 +345,7 @@ func getLastHeightRange(lastKnownHeight, maximumHeightsToGet, lastBlockFromNetwo
 	}
 }
 
-func blockAndTx(ctx context.Context, logger *zap.Logger, client *api.Client, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
+func blockAndTx(ctx context.Context, logger *zap.Logger, client RPC, height uint64) (block structs.Block, txs []structs.Transaction, err error) {
 	defer logger.Sync()
 	logger.Debug("[COSMOS-CLIENT] Getting block", zap.Uint64("block", height))
 	block, err = client.GetBlock(ctx, structs.HeightHash{Height: uint64(height)})
@@ -371,7 +365,7 @@ func blockAndTx(ctx context.Context, logger *zap.Logger, client *api.Client, hei
 	return block, txs, err
 }
 
-func asyncBlockAndTx(ctx context.Context, logger *zap.Logger, wg *sync.WaitGroup, client *api.Client, cinn chan hBTx) {
+func asyncBlockAndTx(ctx context.Context, logger *zap.Logger, wg *sync.WaitGroup, client RPC, cinn chan hBTx) {
 	defer wg.Done()
 	for in := range cinn {
 		b, txs, err := blockAndTx(ctx, logger, client, in.Height)
@@ -412,7 +406,7 @@ type hBTx struct {
 }
 
 // getRange gets given range of blocks and transactions
-func getRange(ctx context.Context, logger *zap.Logger, client *api.Client, hr structs.HeightRange, out chan cStructs.OutResp) (err error) {
+func getRange(ctx context.Context, logger *zap.Logger, client RPC, hr structs.HeightRange, out chan cStructs.OutResp) (err error) {
 	defer logger.Sync()
 
 	chIn := oHBTxPool.Get()

@@ -15,9 +15,9 @@ type Client struct {
 	Sbc    *SimpleBlockCache
 
 	txServiceClient tx.ServiceClient
-
 	tmServiceClient tmservice.ServiceClient
-	rateLimiter     *rate.Limiter
+
+	rateLimiter *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint

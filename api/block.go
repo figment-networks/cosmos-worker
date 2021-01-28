@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/figment-networks/cosmos-worker/api/types"
 	"github.com/figment-networks/indexer-manager/structs"
 	"github.com/tendermint/tendermint/libs/bytes"
 	"google.golang.org/grpc"
@@ -43,11 +42,10 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return block, err
 	}
-	n := time.Now()
 
 	nctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
-	//nctx := context.Background()
+	n := time.Now()
 	if params.Height == 0 {
 		lb, err := c.tmServiceClient.GetLatestBlock(nctx, &tmservice.GetLatestBlockRequest{})
 		if err != nil {
@@ -106,8 +104,10 @@ func (c Client) GetBlockAsync(ctx context.Context, in chan uint64, out chan<- Bl
 
 func (c Client) GetBlocksMeta(ctx context.Context, params structs.HeightRange, blocks *BlocksMap) error {
 
-	var result *types.GetBlockResponse
-	err = decoder.Decode(&result)
+	total := params.EndHeight - params.StartHeight
+	if total == 0 {
+		total = 1
+	}
 
 	for i := uint64(0); i < total; i++ {
 		block, err := c.GetBlock(ctx, structs.HeightHash{Height: uint64(params.StartHeight) + i - 1})

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
 	"github.com/cosmos/cosmos-sdk/types"
@@ -48,7 +47,7 @@ func GovDepositToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent
 	se.Sender = []shared.EventTransfer{sender}
 	se.Amount = txAmount
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, "send", "", lg)
 	return se, err
 }
 
