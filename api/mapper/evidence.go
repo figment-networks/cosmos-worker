@@ -22,18 +22,29 @@ func EvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
 		Type:   []string{"submit_evidence"},
 		Module: "evidence",
 		Node:   map[string][]shared.Account{"submitter": {{ID: mse.Submitter}}},
-		Additional: map[string][]string{
-			"evidence_height": {strconv.FormatInt(mse.GetEvidence().GetHeight(), 10)},
-		},
 	}
 
-	validatorEvi, ok := mse.Evidence.GetCachedValue().(exported.ValidatorEvidence)
+	ev := mse.GetEvidence()
+	if ev == nil {
+		return se, errors.New("Evidence is empty")
+	}
+
+	se.Additional = map[string][]string{
+		"evidence_height": {strconv.FormatInt(ev.GetHeight(), 10)},
+	}
+
+	evc := mse.Evidence.GetCachedValue()
+	if evc == nil {
+		return se, errors.New("Evidence is empty")
+	}
+
+	validatorEvi, ok := evc.(exported.ValidatorEvidence)
 	if !ok {
-		return se, nil
+		return se, errors.New("Evidence is not ValidatorEvidence type")
 	}
 
-	se.Additional["evidence_consensus"] = []string{validatorEvi.GetConsensusAddress().String()}
 	se.Additional["evidence_total_power"] = []string{strconv.FormatInt(validatorEvi.GetTotalPower(), 10)}
 	se.Additional["evidence_validator_power"] = []string{strconv.FormatInt(validatorEvi.GetValidatorPower(), 10)}
+	se.Additional["evidence_consensus"] = []string{validatorEvi.GetConsensusAddress().String()}
 	return se, nil
 }
