@@ -2,9 +2,11 @@ package mapper
 
 import (
 	"errors"
+	"strconv"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
+	"github.com/cosmos/cosmos-sdk/x/evidence/exported"
 	evidence "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	"github.com/gogo/protobuf/proto"
 )
@@ -16,16 +18,22 @@ func EvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
 		return se, errors.New("Not a submit_evidence type" + err.Error())
 	}
 
-	// TODO(lukanus): Any description of the contents of that is not available. Cosmos team is not responsive
-	return shared.SubsetEvent{
-		Type:       []string{"submit_evidence"},
-		Module:     "evidence",
-		Node:       map[string][]shared.Account{"submitter": {{ID: mse.Submitter}}},
-		Additional: map[string][]string{ /*
-				"evidence_consensus":       {mse.Evidence.GetConsensusAddress().String()},
-				"evidence_height":          {strconv.FormatInt(mse.Evidence.GetHeight(), 10)},
-				"evidence_total_power":     {strconv.FormatInt(mse.Evidence.GetTotalPower(), 10)},
-				"evidence_validator_power": {strconv.FormatInt(mse.Evidence.GetValidatorPower(), 10)},*/
+	se = shared.SubsetEvent{
+		Type:   []string{"submit_evidence"},
+		Module: "evidence",
+		Node:   map[string][]shared.Account{"submitter": {{ID: mse.Submitter}}},
+		Additional: map[string][]string{
+			"evidence_height": {strconv.FormatInt(mse.GetEvidence().GetHeight(), 10)},
 		},
-	}, nil
+	}
+
+	validatorEvi, ok := mse.Evidence.GetCachedValue().(exported.ValidatorEvidence)
+	if !ok {
+		return se, nil
+	}
+
+	se.Additional["evidence_consensus"] = []string{validatorEvi.GetConsensusAddress().String()}
+	se.Additional["evidence_total_power"] = []string{strconv.FormatInt(validatorEvi.GetTotalPower(), 10)}
+	se.Additional["evidence_validator_power"] = []string{strconv.FormatInt(validatorEvi.GetValidatorPower(), 10)}
+	return se, nil
 }
