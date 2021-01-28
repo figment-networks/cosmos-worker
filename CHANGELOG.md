@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.0.7] - 2021-01-28
+
+### Added
+- Adds  method to fetch rewards for height
+- New config variable "tendermint_lcd_addr"
+
+### Changed
+### Fixed
+- "validator_source" field is now correct value (was previously repeating validator destination)
+
 ## [0.0.6] - 2020-12-29
 
 ### Added
