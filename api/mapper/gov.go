@@ -103,25 +103,32 @@ func GovSubmitProposalToSub(msg []byte, lg types.ABCIMessageLog) (se shared.Subs
 	se.Sender = []shared.EventTransfer{sender}
 	se.Amount = txAmount
 
-	// TODO(lukanus): Any description of the contents of that is not available. Cosmos team is not responsive
-	/*
-		//	evt.Additional = map[string][]string{}
-			if sp.Content.ProposalRoute() != "" {
-				evt.Additional["proposal_route"] = []string{sp.Content.ProposalRoute()}
-			}
-			if sp.Content.ProposalType() != "" {
-				evt.Additional["proposal_type"] = []string{sp.Content.ProposalType()}
-			}
-			if sp.Content.GetDescription() != "" {
-				evt.Additional["descritpion"] = []string{sp.Content.GetDescription()}
-			}
-			if sp.Content.GetTitle() != "" {
-				evt.Additional["title"] = []string{sp.Content.GetTitle()}
-			}
-			if sp.Content.String() != "" {
-				evt.Additional["content"] = []string{sp.Content.String()}
-			}
-	*/
 	err = produceTransfers(&se, "send", "", lg)
-	return se, err
+	if err != nil {
+		return se, err
+	}
+
+	content := sp.GetContent()
+	if content == nil {
+		return se, nil
+	}
+	se.Additional = map[string][]string{}
+
+	if content.ProposalRoute() != "" {
+		se.Additional["proposal_route"] = []string{content.ProposalRoute()}
+	}
+	if content.ProposalType() != "" {
+		se.Additional["proposal_type"] = []string{content.ProposalType()}
+	}
+	if content.GetDescription() != "" {
+		se.Additional["descritpion"] = []string{content.GetDescription()}
+	}
+	if content.GetTitle() != "" {
+		se.Additional["title"] = []string{content.GetTitle()}
+	}
+	if content.String() != "" {
+		se.Additional["content"] = []string{content.String()}
+	}
+
+	return se, nil
 }
