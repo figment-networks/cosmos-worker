@@ -451,7 +451,7 @@ RANGE_LOOP:
 	}
 
 	if err != nil { // (lukanus): discard everything on error, after error
-		wg.Wait() // (lukanus): make sure there are no outstanging producers
+		wg.Wait() // (lukanus): make sure there are no outstanding producers
 	PURIFY_CHANNELS:
 		for {
 			select {
