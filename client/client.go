@@ -428,7 +428,7 @@ RANGE_LOOP:
 		// (lukanus): add timeout
 		case o := <-chOut:
 			if o.Last {
-				logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("heigh", o.Height))
+				logger.Debug("[COSMOS-CLIENT] Finished sending height", zap.Uint64("height", o.Height))
 				break RANGE_LOOP
 			}
 
