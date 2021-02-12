@@ -1,62 +1,9 @@
 # Change Log
 
-## [0.0.7] - 2021-01-28
+## [0.1.0] - 2021-02-12
 
 ### Added
-- Adds  method to fetch rewards for height
-- New config variable "tendermint_lcd_addr"
+- Initial release
 
-### Changed
-### Fixed
-- "validator_source" field is now correct value (was previously repeating validator destination)
-
-## [0.0.6] - 2020-12-29
-
-### Added
-- Field "transfers" in "sub" of transaction events. This contains "reward" and "send" transfers containing amount and recipient information.
-### Changed
-### Fixed
-
-
-## [0.0.5] - 2020-12-02
-
-### Added
-### Changed
-### Fixed
-- Fallback in transactions on message type error
-- Dynamic log level switch
-
-## [0.0.4] - 2020-12-01
-
-### Added
-- Transaction objects are having log field filled with transaction log data
-- '/loglevel' endpoint for dynamically changing log level
-
-### Changed
-### Fixed
-- Errors from transaction logs are now as well populated
-
-
-## [0.0.3] - 2020-11-17
-
-### Added
-- Plugin from populator that adds ability for parse the fee from raw transaction
-### Changed
-### Fixed
-- Fee is noe populated properly for scraped items
-
-
-## [0.0.2] - 2020-11-03
-
-### Added
-### Changed
-### Fixed
-- Decoder issue after error in the beginning of the transaction list.
-
-## [0.0.1] - 2020-10-28
-
-Initial release
-
-### Added
 ### Changed
 ### Fixed
