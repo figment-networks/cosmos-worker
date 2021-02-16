@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func IBCConnectionOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenInit{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a connection_open_init type" + err.Error())
+		return se, fmt.Errorf("Not a connection_open_init type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -26,7 +26,7 @@ func IBCConnectionOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCConnectionOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenConfirm{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a connection_open_confirm type" + err.Error())
+		return se, fmt.Errorf("Not a connection_open_confirm type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -39,7 +39,7 @@ func IBCConnectionOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error
 func IBCConnectionOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenAck{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a connection_open_ack type" + err.Error())
+		return se, fmt.Errorf("Not a connection_open_ack type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -52,7 +52,7 @@ func IBCConnectionOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCConnectionOpenTryToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenTry{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a connection_open_try type" + err.Error())
+		return se, fmt.Errorf("Not a connection_open_try type: %w", err)
 	}
 
 	return shared.SubsetEvent{

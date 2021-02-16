@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func IBCCreateClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgCreateClient{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a create_client type: " + err.Error())
+		return se, fmt.Errorf("Not a create_client type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -26,7 +26,7 @@ func IBCCreateClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCUpdateClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgUpdateClient{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a update_client type" + err.Error())
+		return se, fmt.Errorf("Not a update_client type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -39,7 +39,7 @@ func IBCUpdateClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCUpgradeClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgUpgradeClient{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a upgrade_client type" + err.Error())
+		return se, fmt.Errorf("Not a upgrade_client type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -52,7 +52,7 @@ func IBCUpgradeClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCSubmitMisbehaviourToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgSubmitMisbehaviour{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a submit_misbehaviour type" + err.Error())
+		return se, fmt.Errorf("Not a submit_misbehaviour type: %w", err)
 	}
 
 	return shared.SubsetEvent{

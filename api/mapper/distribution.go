@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -14,7 +14,7 @@ import (
 func DistributionWithdrawValidatorCommissionToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	wvc := &distribution.MsgWithdrawValidatorCommission{}
 	if err := proto.Unmarshal(msg, wvc); err != nil {
-		return se, errors.New("Not a distribution type" + err.Error())
+		return se, fmt.Errorf("Not a distribution type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -34,7 +34,7 @@ func DistributionWithdrawValidatorCommissionToSub(msg []byte, lg types.ABCIMessa
 func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	swa := &distribution.MsgSetWithdrawAddress{}
 	if err := proto.Unmarshal(msg, swa); err != nil {
-		return se, errors.New("Not a set_withdraw_address type" + err.Error())
+		return se, fmt.Errorf("Not a set_withdraw_address type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -51,7 +51,7 @@ func DistributionSetWithdrawAddressToSub(msg []byte) (se shared.SubsetEvent, err
 func DistributionWithdrawDelegatorRewardToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	wdr := &distribution.MsgWithdrawDelegatorReward{}
 	if err := proto.Unmarshal(msg, wdr); err != nil {
-		return se, errors.New("Not a withdraw_validator_commission type" + err.Error())
+		return se, fmt.Errorf("Not a withdraw_validator_commission type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -74,7 +74,7 @@ func DistributionWithdrawDelegatorRewardToSub(msg []byte, lg types.ABCIMessageLo
 func DistributionFundCommunityPoolToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	fcp := &distribution.MsgFundCommunityPool{}
 	if err := proto.Unmarshal(msg, fcp); err != nil {
-		return se, errors.New("Not a fund_community_pool type" + err.Error())
+		return se, fmt.Errorf("Not a fund_community_pool type: %w", err)
 	}
 
 	evt, err := distributionProduceEvTx(fcp.Depositor, fcp.Amount)

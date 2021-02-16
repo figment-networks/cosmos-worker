@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func IBCChannelOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelOpenInit{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_open_init type" + err.Error())
+		return se, fmt.Errorf("Not a channel_open_init type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -26,7 +26,7 @@ func IBCChannelOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelOpenConfirm{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_open_confirm type" + err.Error())
+		return se, fmt.Errorf("Not a channel_open_confirm type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -39,7 +39,7 @@ func IBCChannelOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelOpenAck{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_open_ack type" + err.Error())
+		return se, fmt.Errorf("Not a channel_open_ack type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -52,7 +52,7 @@ func IBCChannelOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelOpenTryToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelOpenTry{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_open_try type" + err.Error())
+		return se, fmt.Errorf("Not a channel_open_try type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -65,7 +65,7 @@ func IBCChannelOpenTryToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelCloseInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelCloseInit{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_close_init type" + err.Error())
+		return se, fmt.Errorf("Not a channel_close_init type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -78,7 +78,7 @@ func IBCChannelCloseInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelCloseConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelCloseConfirm{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_close_confirm type" + err.Error())
+		return se, fmt.Errorf("Not a channel_close_confirm type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -91,7 +91,7 @@ func IBCChannelCloseConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) 
 func IBCChannelRecvPacketToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgRecvPacket{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a recv_packet type" + err.Error())
+		return se, fmt.Errorf("Not a recv_packet type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -104,7 +104,7 @@ func IBCChannelRecvPacketToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelTimeoutToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgTimeout{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a timeout type" + err.Error())
+		return se, fmt.Errorf("Not a timeout type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -117,7 +117,7 @@ func IBCChannelTimeoutToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func IBCChannelAcknowledgementToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgAcknowledgement{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a channel_acknowledgement type" + err.Error())
+		return se, fmt.Errorf("Not a channel_acknowledgement type: %w", err)
 	}
 
 	return shared.SubsetEvent{

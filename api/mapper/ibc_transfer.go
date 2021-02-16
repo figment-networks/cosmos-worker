@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func IBCTransferToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &transfer.MsgTransfer{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a transfer type" + err.Error())
+		return se, fmt.Errorf("Not a transfer type: %w", err)
 	}
 
 	return shared.SubsetEvent{

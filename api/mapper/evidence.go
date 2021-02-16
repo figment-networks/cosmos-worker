@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
@@ -15,7 +16,7 @@ import (
 func EvidenceSubmitEvidenceToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	mse := &evidence.MsgSubmitEvidence{}
 	if err := proto.Unmarshal(msg, mse); err != nil {
-		return se, errors.New("Not a submit_evidence type" + err.Error())
+		return se, fmt.Errorf("Not a submit_evidence type: %w", err)
 	}
 
 	se = shared.SubsetEvent{

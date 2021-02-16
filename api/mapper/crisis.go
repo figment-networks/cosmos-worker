@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func CrisisVerifyInvariantToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	mvi := &crisis.MsgVerifyInvariant{}
 	if err := proto.Unmarshal(msg, mvi); err != nil {
-		return se, errors.New("Not a crisis type" + err.Error())
+		return se, fmt.Errorf("Not a crisis type: %w", err)
 	}
 
 	return shared.SubsetEvent{

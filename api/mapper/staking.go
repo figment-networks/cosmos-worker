@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -14,7 +14,7 @@ import (
 func StakingUndelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	u := &staking.MsgUndelegate{}
 	if err := proto.Unmarshal(msg, u); err != nil {
-		return se, errors.New("Not a undelegate type" + err.Error())
+		return se, fmt.Errorf("Not a undelegate type: %w", err)
 	}
 	se = shared.SubsetEvent{
 		Type:   []string{"undelegate"},
@@ -40,7 +40,7 @@ func StakingUndelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.Subs
 func StakingDelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	d := &staking.MsgDelegate{}
 	if err := proto.Unmarshal(msg, d); err != nil {
-		return se, errors.New("Not a delegate type" + err.Error())
+		return se, fmt.Errorf("Not a delegate type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -67,7 +67,7 @@ func StakingDelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.Subset
 func StakingBeginRedelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	br := &staking.MsgBeginRedelegate{}
 	if err := proto.Unmarshal(msg, br); err != nil {
-		return se, errors.New("Not a begin_redelegate type" + err.Error())
+		return se, fmt.Errorf("Not a begin_redelegate type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -95,7 +95,7 @@ func StakingBeginRedelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared
 func StakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	ev := &staking.MsgCreateValidator{}
 	if err := proto.Unmarshal(msg, ev); err != nil {
-		return se, errors.New("Not a create_validator type" + err.Error())
+		return se, fmt.Errorf("Not a create_validator type: %w", err)
 	}
 	return shared.SubsetEvent{
 		Type:   []string{"create_validator"},
@@ -143,7 +143,7 @@ func StakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) 
 func StakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	ev := &staking.MsgEditValidator{}
 	if err := proto.Unmarshal(msg, ev); err != nil {
-		return se, errors.New("Not a edit_validator type" + err.Error())
+		return se, fmt.Errorf("Not a edit_validator type: %w", err)
 	}
 	sev := shared.SubsetEvent{
 		Type:   []string{"edit_validator"},
