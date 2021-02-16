@@ -289,7 +289,6 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		default:
 			err = fmt.Errorf("Unknown ibc connection message Type")
 		}
-
 	case "channel":
 		switch msgType {
 		case "MsgChannelOpenInit":
@@ -297,7 +296,13 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		default:
 			err = fmt.Errorf("Unknown ibc channel message Type")
 		}
-
+	case "transfer":
+		switch msgType {
+		case "MsgTransfer":
+			ev, err = mapper.IBCTransferToSub(m.Value)
+		default:
+			err = fmt.Errorf("Unknown ibc transfer message Type")
+		}
 	default:
 		err = fmt.Errorf("Unknown ibc message route: %v", msgType)
 	}

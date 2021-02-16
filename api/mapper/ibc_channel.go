@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// IBCChannelOpenInitToSub transforms ibc.MsgSubmitMisbehaviour sdk messages to SubsetEvent
+// IBCChannelOpenInitToSub transforms ibc.MsgChannelOpenInit sdk messages to SubsetEvent
 func IBCChannelOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &channel.MsgChannelOpenInit{}
 	if err := proto.Unmarshal(msg, m); err != nil {

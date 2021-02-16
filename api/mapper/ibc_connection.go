@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// IBCConnectionOpenInitToSub transforms ibc.MsgSubmitMisbehaviour sdk messages to SubsetEvent
+// IBCConnectionOpenInitToSub transforms ibc.MsgConnectionOpenInit sdk messages to SubsetEvent
 func IBCConnectionOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenInit{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -22,7 +22,7 @@ func IBCConnectionOpenInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	}, nil
 }
 
-// IBCConnectionOpenConfirmToSub transforms ibc.MsgSubmitMisbehaviour sdk messages to SubsetEvent
+// IBCConnectionOpenConfirmToSub transforms ibc.MsgConnectionOpenConfirm sdk messages to SubsetEvent
 func IBCConnectionOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenConfirm{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -35,7 +35,7 @@ func IBCConnectionOpenConfirmToSub(msg []byte) (se shared.SubsetEvent, err error
 	}, nil
 }
 
-// IBCConnectionOpenAckToSub transforms ibc.MsgSubmitMisbehaviour sdk messages to SubsetEvent
+// IBCConnectionOpenAckToSub transforms ibc.MsgConnectionOpenAck sdk messages to SubsetEvent
 func IBCConnectionOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenAck{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -48,7 +48,7 @@ func IBCConnectionOpenAckToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	}, nil
 }
 
-// IBCConnectionOpenTryToSub transforms ibc.MsgSubmitMisbehaviour sdk messages to SubsetEvent
+// IBCConnectionOpenTryToSub transforms ibc.MsgConnectionOpenTry sdk messages to SubsetEvent
 func IBCConnectionOpenTryToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &connection.MsgConnectionOpenTry{}
 	if err := proto.Unmarshal(msg, m); err != nil {
