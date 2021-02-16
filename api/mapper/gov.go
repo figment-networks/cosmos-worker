@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
@@ -15,7 +15,7 @@ import (
 func GovDepositToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	dep := &gov.MsgDeposit{}
 	if err := proto.Unmarshal(msg, dep); err != nil {
-		return se, errors.New("Not a deposit type" + err.Error())
+		return se, fmt.Errorf("Not a deposit type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -55,7 +55,7 @@ func GovDepositToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent
 func GovVoteToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	vote := &gov.MsgVote{}
 	if err := proto.Unmarshal(msg, vote); err != nil {
-		return se, errors.New("Not a vote type" + err.Error())
+		return se, fmt.Errorf("Not a vote type: %w", err)
 	}
 
 	return shared.SubsetEvent{
@@ -73,7 +73,7 @@ func GovVoteToSub(msg []byte) (se shared.SubsetEvent, err error) {
 func GovSubmitProposalToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	sp := &gov.MsgSubmitProposal{}
 	if err := proto.Unmarshal(msg, sp); err != nil {
-		return se, errors.New("Not a submit_proposal type" + err.Error())
+		return se, fmt.Errorf("Not a submit_proposal type: %w", err)
 	}
 
 	se = shared.SubsetEvent{

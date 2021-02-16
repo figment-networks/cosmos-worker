@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -14,7 +14,7 @@ import (
 func BankMultisendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	multisend := &bank.MsgMultiSend{}
 	if err := proto.Unmarshal(msg, multisend); err != nil {
-		return se, errors.New("Not a multisend type" + err.Error())
+		return se, fmt.Errorf("Not a multisend type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -45,7 +45,7 @@ func BankMultisendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEv
 func BankSendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	send := &bank.MsgSend{}
 	if err := proto.Unmarshal(msg, send); err != nil {
-		return se, errors.New("Not a send type" + err.Error())
+		return se, fmt.Errorf("Not a send type: %w", err)
 	}
 
 	se = shared.SubsetEvent{

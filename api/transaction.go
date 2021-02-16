@@ -120,16 +120,16 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			var msgType string
 			if len(tPath) == 5 && tPath[0] == "/ibc" {
 				msgType = tPath[4]
-				err = addIBCSubEvent(tPath[2], msgType, &tev, m, lg, logger)
+				err = addIBCSubEvent(tPath[2], msgType, &tev, m, lg)
 			} else if len(tPath) == 4 && tPath[0] == "/cosmos" {
 				msgType = tPath[3]
-				err = addSubEvent(tPath[1], msgType, &tev, m, lg, logger)
+				err = addSubEvent(tPath[1], msgType, &tev, m, lg)
 			} else {
 				err = fmt.Errorf("TypeURL is in wrong format: %v", m.TypeUrl)
 			}
 
 			if err != nil {
-				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl), zap.Int64("height", resp.Height))
 				return trans, err
 			}
 
@@ -176,7 +176,7 @@ func findLog(logs types.ABCIMessageLogs, index int) types.ABCIMessageLog {
 	return types.ABCIMessageLog{}
 }
 
-func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog, logger *zap.Logger) (err error) {
+func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog) (err error) {
 	var ev structs.SubsetEvent
 	switch msgRoute {
 	case "bank":
@@ -186,14 +186,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgMultiSend":
 			ev, err = mapper.BankMultisendToSub(m.Value, lg)
 		default:
-			logger.Error("[COSMOS-API] Unknown bank message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown bank message Type")
 		}
 	case "crisis":
 		switch msgType {
 		case "MsgVerifyInvariant":
 			ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
 		default:
-			logger.Error("[COSMOS-API] Unknown crisis message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown crisis message Type")
 		}
 	case "distribution":
 		switch msgType {
@@ -206,14 +206,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgFundCommunityPool":
 			ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
 		default:
-			logger.Error("[COSMOS-API] Unknown distribution message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown distribution message Type")
 		}
 	case "evidence":
 		switch msgType {
 		case "MsgSubmitEvidence":
 			ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
 		default:
-			logger.Error("[COSMOS-API] Unknown evidence message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown evidence message Type")
 		}
 	case "gov":
 		switch msgType {
@@ -224,14 +224,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgSubmitProposal":
 			ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
 		default:
-			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown gov message Type")
 		}
 	case "slashing":
 		switch msgType {
 		case "MsgUnjail":
 			ev, err = mapper.SlashingUnjailToSub(m.Value)
 		default:
-			logger.Error("[COSMOS-API] Unknown slashing message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown slashing message Type")
 		}
 	case "staking":
 		switch msgType {
@@ -246,10 +246,10 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgBeginRedelegate":
 			ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
 		default:
-			logger.Error("[COSMOS-API] Unknown staking message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown staking message Type")
 		}
 	default:
-		logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", msgType), zap.String("type", m.TypeUrl))
+		err = fmt.Errorf("Unknown message Route %v", msgType)
 	}
 
 	if len(ev.Type) > 0 {
@@ -259,7 +259,7 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 	return err
 }
 
-func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog, logger *zap.Logger) (err error) {
+func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog) (err error) {
 	var ev structs.SubsetEvent
 
 	switch msgRoute {
@@ -268,11 +268,13 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		case "MsgCreateClient":
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		case "MsgUpdateClient":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCUpdateClientToSub(m.Value)
 		case "MsgUpgradeClient":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCUpgradeClientToSub(m.Value)
 		case "MsgSubmitMisbehaviour":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCSubmitMisbehaviourToSub(m.Value)
+		default:
+			err = fmt.Errorf("Unknown ibc client message Type")
 		}
 	case "connection":
 		switch msgType {
@@ -285,19 +287,41 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		case "MsgConnectionOpenTry":
 			ev, err = mapper.IBCConnectionOpenTryToSub(m.Value)
 		default:
-			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
+			err = fmt.Errorf("Unknown ibc connection message Type")
 		}
-
 	case "channel":
 		switch msgType {
 		case "MsgChannelOpenInit":
 			ev, err = mapper.IBCChannelOpenInitToSub(m.Value)
-		default:
-			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
-		}
+		case "MsgChannelOpenTry":
+			ev, err = mapper.IBCChannelOpenTryToSub(m.Value)
+		case "MsgChannelOpenConfirm":
+			ev, err = mapper.IBCChannelOpenConfirmToSub(m.Value)
+		case "MsgChannelOpenAck":
+			ev, err = mapper.IBCChannelOpenAckToSub(m.Value)
+		case "MsgChannelCloseInit":
+			ev, err = mapper.IBCChannelCloseInitToSub(m.Value)
+		case "MsgChannelCloseConfirm":
+			ev, err = mapper.IBCChannelCloseConfirmToSub(m.Value)
+		case "MsgRecvPacket":
+			ev, err = mapper.IBCChannelRecvPacketToSub(m.Value)
+		case "MsgTimeout":
+			ev, err = mapper.IBCChannelTimeoutToSub(m.Value)
+		case "MsgAcknowledgement":
+			ev, err = mapper.IBCChannelAcknowledgementToSub(m.Value)
 
+		default:
+			err = fmt.Errorf("Unknown ibc channel message Type")
+		}
+	case "transfer":
+		switch msgType {
+		case "MsgTransfer":
+			ev, err = mapper.IBCTransferToSub(m.Value)
+		default:
+			err = fmt.Errorf("Unknown ibc transfer message Type")
+		}
 	default:
-		logger.Error("[COSMOS-API] Unknown message Route ", zap.Error(err), zap.String("route", msgType), zap.String("type", m.TypeUrl))
+		err = fmt.Errorf("Unknown ibc message route: %v", msgType)
 	}
 
 	if len(ev.Type) > 0 {

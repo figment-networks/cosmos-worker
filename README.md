@@ -43,7 +43,7 @@ After running both binaries worker should successfully register itself to the ma
 If you wanna connect with manager running on docker instance add `HOSTNAME=host.docker.internal` (this is for OSX and Windows). For linux add your docker gateway address taken from ifconfig (it probably be the one from interface called docker0).
 
 ## Transaction Types
-List of currently supporter transaction types in cosmos-worker are (listed by modules):
+List of currently supported transaction types in cosmos-worker are (listed by modules):
 - bank:
     `multisend` , `send`
 - crisis:
@@ -58,5 +58,17 @@ List of currently supporter transaction types in cosmos-worker are (listed by mo
     `unjail`
 - staking:
     `begin_unbonding` , `edit_validator` , `create_validator` , `delegate` , `begin_redelegate`
+- internal:
+    `error`
+
+List of currently supported ibc transaction types in cosmos-worker are (listed by modules):
+- channel:
+    `channel_open_init` , `channel_open_confirm`, `channel_open_ack`, `channel_open_try`, `channel_close_init`, `channel_close_confirm`, `recv_packet`, `timeout`, `channel_acknowledgement`
+- client:
+    `create_client` , `update_client`, `upgrade_client`, `submit_misbehaviour`
+- connection:
+    `connection_open_init` , `connection_open_confirm`, `connection_open_ack`, `connection_open_try`
+- transfer:
+    `transfer`
 - internal:
     `error`

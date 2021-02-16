@@ -184,7 +184,7 @@ func initConfig(path string) (*config.Config, error) {
 		}
 	}
 
-	if cfg.TendermintRPCAddr != "" {
+	if cfg.CosmosGRPCAddr != "" {
 		return cfg, nil
 	}
 

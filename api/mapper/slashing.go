@@ -1,7 +1,7 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
@@ -13,7 +13,7 @@ import (
 func SlashingUnjailToSub(msg []byte) (se shared.SubsetEvent, er error) {
 	unjail := &slashing.MsgUnjail{}
 	if err := proto.Unmarshal(msg, unjail); err != nil {
-		return se, errors.New("Not a unjail type" + err.Error())
+		return se, fmt.Errorf("Not a unjail type: %w", err)
 	}
 
 	return shared.SubsetEvent{

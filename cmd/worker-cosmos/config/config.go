@@ -27,8 +27,7 @@ type Config struct {
 	Port     string `json:"port" envconfig:"PORT" default:"3000"`
 	HTTPPort string `json:"http_port" envconfig:"HTTP_PORT" default:"8087"`
 
-	TendermintRPCAddr string `json:"tendermint_rpc_addr" envconfig:"TENDERMINT_RPC_ADDR"`
-	DatahubKey        string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
+	DatahubKey string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
 
 	CosmosGRPCAddr string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
 	ChainID        string `json:"chain_id" envconfig:"CHAIN_ID"`
