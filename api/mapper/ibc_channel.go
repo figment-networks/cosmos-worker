@@ -60,3 +60,68 @@ func IBCChannelOpenTryToSub(msg []byte) (se shared.SubsetEvent, err error) {
 		Module: "ibc",
 	}, nil
 }
+
+// IBCChannelCloseInitToSub transforms ibc.MsgChannelCloseInit sdk messages to SubsetEvent
+func IBCChannelCloseInitToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	m := &channel.MsgChannelCloseInit{}
+	if err := proto.Unmarshal(msg, m); err != nil {
+		return se, errors.New("Not a channel_close_init type" + err.Error())
+	}
+
+	return shared.SubsetEvent{
+		Type:   []string{"channel_close_init"},
+		Module: "ibc",
+	}, nil
+}
+
+// IBCChannelCloseConfirmToSub transforms ibc.MsgChannelCloseConfirm sdk messages to SubsetEvent
+func IBCChannelCloseConfirmToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	m := &channel.MsgChannelCloseConfirm{}
+	if err := proto.Unmarshal(msg, m); err != nil {
+		return se, errors.New("Not a channel_close_confirm type" + err.Error())
+	}
+
+	return shared.SubsetEvent{
+		Type:   []string{"channel_close_confirm"},
+		Module: "ibc",
+	}, nil
+}
+
+// IBCChannelRecvPacketToSub transforms ibc.MsgRecvPacket sdk messages to SubsetEvent
+func IBCChannelRecvPacketToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	m := &channel.MsgRecvPacket{}
+	if err := proto.Unmarshal(msg, m); err != nil {
+		return se, errors.New("Not a recv_packet type" + err.Error())
+	}
+
+	return shared.SubsetEvent{
+		Type:   []string{"recv_packet"},
+		Module: "ibc",
+	}, nil
+}
+
+// IBCChannelTimeoutToSub transforms ibc.MsgTimeout sdk messages to SubsetEvent
+func IBCChannelTimeoutToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	m := &channel.MsgTimeout{}
+	if err := proto.Unmarshal(msg, m); err != nil {
+		return se, errors.New("Not a timeout type" + err.Error())
+	}
+
+	return shared.SubsetEvent{
+		Type:   []string{"timeout"},
+		Module: "ibc",
+	}, nil
+}
+
+// IBCChannelAcknowledgementToSub transforms ibc.MsgAcknowledgement sdk messages to SubsetEvent
+func IBCChannelAcknowledgementToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	m := &channel.MsgAcknowledgement{}
+	if err := proto.Unmarshal(msg, m); err != nil {
+		return se, errors.New("Not a channel_acknowledgement type" + err.Error())
+	}
+
+	return shared.SubsetEvent{
+		Type:   []string{"channel_acknowledgement"},
+		Module: "ibc",
+	}, nil
+}

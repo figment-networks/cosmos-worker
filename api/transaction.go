@@ -299,6 +299,17 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 			ev, err = mapper.IBCChannelOpenConfirmToSub(m.Value)
 		case "MsgChannelOpenAck":
 			ev, err = mapper.IBCChannelOpenAckToSub(m.Value)
+		case "MsgChannelCloseInit":
+			ev, err = mapper.IBCChannelCloseInitToSub(m.Value)
+		case "MsgChannelCloseConfirm":
+			ev, err = mapper.IBCChannelCloseConfirmToSub(m.Value)
+		case "MsgRecvPacket":
+			ev, err = mapper.IBCChannelRecvPacketToSub(m.Value)
+		case "MsgTimeout":
+			ev, err = mapper.IBCChannelTimeoutToSub(m.Value)
+		case "MsgAcknowledgement":
+			ev, err = mapper.IBCChannelAcknowledgementToSub(m.Value)
+
 		default:
 			err = fmt.Errorf("Unknown ibc channel message Type")
 		}
