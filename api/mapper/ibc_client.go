@@ -13,7 +13,7 @@ import (
 func IBCCreateClientToSub(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgCreateClient{}
 	if err := proto.Unmarshal(msg, m); err != nil {
-		return se, errors.New("Not a create_client type" + err.Error())
+		return se, errors.New("Not a create_client type: " + err.Error())
 	}
 
 	return shared.SubsetEvent{

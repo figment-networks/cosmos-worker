@@ -268,11 +268,13 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		case "MsgCreateClient":
 			ev, err = mapper.IBCCreateClientToSub(m.Value)
 		case "MsgUpdateClient":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCUpdateClientToSub(m.Value)
 		case "MsgUpgradeClient":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCUpgradeClientToSub(m.Value)
 		case "MsgSubmitMisbehaviour":
-			ev, err = mapper.IBCCreateClientToSub(m.Value)
+			ev, err = mapper.IBCSubmitMisbehaviourToSub(m.Value)
+		default:
+			logger.Error("[COSMOS-API] Unknown got message Type ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl))
 		}
 	case "connection":
 		switch msgType {
