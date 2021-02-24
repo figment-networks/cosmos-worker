@@ -115,7 +115,12 @@ func main() {
 	}
 	defer grpcConn.Close()
 
-	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond))
+	if cfg.TendermintLCDAddr == "" || cfg.DatahubKey ==  "" {
+		logger.Error(fmt.Errorf(" lcd info is not set"))
+		return
+	}
+
+	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond), cfg.TendermintLCDAddr, cfg.DatahubKey)
 
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.MaximumHeightsToGet))

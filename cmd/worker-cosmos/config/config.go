@@ -29,6 +29,7 @@ type Config struct {
 
 	DatahubKey string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
 
+	TendermintLCDAddr string `json:"tendermint_lcd_addr" envconfig:"TENDERMINT_LCD_ADDR"`
 	CosmosGRPCAddr string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
 	ChainID        string `json:"chain_id" envconfig:"CHAIN_ID"`
 

@@ -14,14 +14,19 @@ type Client struct {
 	cli    *grpc.ClientConn
 	Sbc    *SimpleBlockCache
 
+	// rpc
 	txServiceClient tx.ServiceClient
 	tmServiceClient tmservice.ServiceClient
+
+	//lcd
+	tendermintLCDAddr string
+	datahubKey string
 
 	rateLimiter *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int) *Client {
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int , tendermintLCDAddr, datahubKey string ) *Client {
 	rateLimiter := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
 
 	return &Client{
@@ -30,6 +35,8 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int) *Cl
 		Sbc:             NewSimpleBlockCache(400),
 		tmServiceClient: tmservice.NewServiceClient(cli),
 		txServiceClient: tx.NewServiceClient(cli),
+		tendermintLCDAddr: tendermintLCDAddr,
+		datahubKey: datahubKey,
 	}
 }
 
