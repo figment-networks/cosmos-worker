@@ -6,6 +6,8 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"net/http"
+	"time"
 )
 
 // Client  ads
@@ -20,23 +22,27 @@ type Client struct {
 
 	//lcd
 	tendermintLCDAddr string
-	datahubKey string
+	datahubKey        string
+	httpClient        *http.Client
 
 	rateLimiter *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int , tendermintLCDAddr, datahubKey string ) *Client {
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, tendermintLCDAddr, datahubKey string) *Client {
 	rateLimiter := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
 
 	return &Client{
-		logger:          logger,
-		rateLimiter:     rateLimiter,
-		Sbc:             NewSimpleBlockCache(400),
-		tmServiceClient: tmservice.NewServiceClient(cli),
-		txServiceClient: tx.NewServiceClient(cli),
+		logger:            logger,
+		rateLimiter:       rateLimiter,
+		Sbc:               NewSimpleBlockCache(400),
+		tmServiceClient:   tmservice.NewServiceClient(cli),
+		txServiceClient:   tx.NewServiceClient(cli),
 		tendermintLCDAddr: tendermintLCDAddr,
-		datahubKey: datahubKey,
+		datahubKey:        datahubKey,
+		httpClient: &http.Client{
+			Timeout: time.Second * 40,
+		},
 	}
 }
 
