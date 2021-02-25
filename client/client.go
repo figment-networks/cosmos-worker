@@ -39,6 +39,7 @@ type RPC interface {
 
 type LCD interface {
 	GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error)
+	GetAccountBalance(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountBalanceResponse, err error)
 }
 
 type OutputSender interface {
