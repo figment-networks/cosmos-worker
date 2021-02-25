@@ -22,9 +22,11 @@ const page = 100
 const blockchainEndpointLimit = 20
 
 var (
-	getTransactionDuration *metrics.GroupObserver
-	getLatestDuration      *metrics.GroupObserver
-	getBlockDuration       *metrics.GroupObserver
+	getTransactionDuration    *metrics.GroupObserver
+	getLatestDuration         *metrics.GroupObserver
+	getBlockDuration          *metrics.GroupObserver
+	getRewardDuration         *metrics.GroupObserver
+	getAccountBalanceDuration *metrics.GroupObserver
 )
 
 type CAPI interface {
@@ -62,6 +64,8 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, capi CAPI, maximu
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
+	getRewardDuration = endpointDuration.WithLabels("getReward")
+	getAccountBalanceDuration = endpointDuration.WithLabels("getAccountBalance")
 	api.InitMetrics()
 
 	return &IndexerClient{
@@ -121,6 +125,8 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 				ic.GetLatest(tctx, taskRequest, stream, ic.capi)
 			case structs.ReqIDGetReward:
 				ic.GetReward(tctx, taskRequest, stream, ic.capi)
+			case structs.ReqIDAccountBalance:
+				ic.GetAccountBalance(tctx, taskRequest, stream, ic.capi)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -232,9 +238,50 @@ func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, 
 	sendResp(ctx, tr.Id, out, ic.logger, stream, nil)
 }
 
+// GetAccountBalance gets account balance
+func (ic *IndexerClient) GetAccountBalance(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client LCD) {
+	timer := metrics.NewTimer(getAccountBalanceDuration)
+	defer timer.ObserveDuration()
+
+	ha := &structs.HeightAccount{}
+	err := json.Unmarshal(tr.Payload, ha)
+	if err != nil {
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Cannot unmarshal payload"},
+			Final: true,
+		})
+		return
+	}
+
+	sCtx, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	blnc, err := client.GetAccountBalance(sCtx, *ha)
+	if err != nil {
+		ic.logger.Error("Error getting account balance", zap.Error(err))
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Error getting account balance data " + err.Error()},
+			Final: true,
+		})
+		return
+	}
+
+	out := make(chan cStructs.OutResp, 1)
+	out <- cStructs.OutResp{
+		ID:      tr.Id,
+		Type:    "AccountBalance",
+		Payload: blnc,
+	}
+	close(out)
+
+	sendResp(ctx, tr.Id, out, ic.logger, stream, nil)
+}
+
 // GetReward gets reward
 func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client LCD) {
-	timer := metrics.NewTimer(getBlockDuration)
+	timer := metrics.NewTimer(getRewardDuration)
 	defer timer.ObserveDuration()
 
 	ha := &structs.HeightAccount{}
