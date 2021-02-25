@@ -27,6 +27,11 @@ var (
 	getBlockDuration       *metrics.GroupObserver
 )
 
+type CAPI interface {
+	RPC
+	LCD
+}
+
 type RPC interface {
 	GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, er error)
 	SearchTx(ctx context.Context, r structs.HeightHash, block structs.Block, perPage uint64) (txs []structs.Transaction, err error)
@@ -42,7 +47,7 @@ type OutputSender interface {
 
 // IndexerClient is implementation of a client (main worker code)
 type IndexerClient struct {
-	grpcCli RPC
+	capi CAPI // cosmos api
 
 	logger  *zap.Logger
 	streams map[uuid.UUID]*cStructs.StreamAccess
@@ -52,7 +57,7 @@ type IndexerClient struct {
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpcCli RPC, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, capi CAPI, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -60,7 +65,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpcCli RPC, maxi
 
 	return &IndexerClient{
 		logger:              logger,
-		grpcCli:             grpcCli,
+		capi:                capi,
 		maximumHeightsToGet: maximumHeightsToGet,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
 	}
@@ -110,9 +115,11 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 			tctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 			switch taskRequest.Type {
 			case structs.ReqIDGetTransactions:
-				ic.GetTransactions(tctx, taskRequest, stream, ic.grpcCli)
+				ic.GetTransactions(tctx, taskRequest, stream, ic.capi)
 			case structs.ReqIDLatestData:
-				ic.GetLatest(tctx, taskRequest, stream, ic.grpcCli)
+				ic.GetLatest(tctx, taskRequest, stream, ic.capi)
+			case structs.ReqIDGetReward:
+				ic.GetReward(tctx, taskRequest, stream, ic.capi)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -296,7 +303,7 @@ func (ic *IndexerClient) GetLatest(ctx context.Context, tr cStructs.TaskRequest,
 	go sendResp(sCtx, tr.Id, out, ic.logger, stream, fin)
 
 	ic.logger.Debug("[COSMOS-CLIENT] Getting Range", zap.Stringer("taskID", tr.Id), zap.Uint64("start", hr.StartHeight), zap.Uint64("end", hr.EndHeight))
-	if err := getRange(sCtx, ic.logger, ic.grpcCli, hr, out); err != nil {
+	if err := getRange(sCtx, ic.logger, ic.capi, hr, out); err != nil {
 		stream.Send(cStructs.TaskResponse{
 			Id:    tr.Id,
 			Error: cStructs.TaskError{Msg: err.Error()},

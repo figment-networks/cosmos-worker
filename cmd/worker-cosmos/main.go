@@ -115,7 +115,7 @@ func main() {
 	}
 	defer grpcConn.Close()
 
-	if cfg.TendermintLCDAddr == "" || cfg.DatahubKey ==  "" {
+	if cfg.TendermintLCDAddr == "" || cfg.DatahubKey == "" {
 		logger.Error(fmt.Errorf(" lcd info is not set"))
 		return
 	}

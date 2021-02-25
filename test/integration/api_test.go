@@ -45,7 +45,7 @@ func TestGetBlock(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			cli := api.NewClient(zl, conn, 10)
+			cli := api.NewClient(zl, conn, 10, "", "")
 			end := make(chan error, 10)
 			defer close(end)
 
@@ -107,7 +107,7 @@ func TestGetResponseConsistency(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			apiClient := api.NewClient(zl, conn, tt.args.reqsec)
+			apiClient := api.NewClient(zl, conn, tt.args.reqsec, "", "")
 			workerClient := client.NewIndexerClient(ctx, zl, apiClient, uint64(1000))
 
 			sr := newSendRegistry()
