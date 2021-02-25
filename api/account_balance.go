@@ -7,7 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"strconv"
 
-	//"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/figment-networks/indexer-manager/structs"
 	"net"
 	"net/http"
