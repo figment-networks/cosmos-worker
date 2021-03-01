@@ -190,12 +190,15 @@ func TestGetDelegatorReward(t *testing.T) {
 	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
 	dataHubKey := "" // set your api key before testing
 	tests := []struct {
-		name       string
-		lcdAddr    string
-		dataHubKey string
-		args       structs.HeightAccount
-		resultText string
-		wantErr    bool
+		name        string
+		lcdAddr     string
+		dataHubKey  string
+		args        structs.HeightAccount
+		resText     string
+		resCurrency string
+		resNumeric  string
+		resExp      int32
+		wantErr     bool
 	}{
 		{
 			name:       "wrong delegator address syntax",
@@ -215,8 +218,11 @@ func TestGetDelegatorReward(t *testing.T) {
 				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
 				Height:  5217493,
 			},
-			resultText: "0.080405949465470000",
-			wantErr:    false,
+			resText:     "0.080405949465470000",
+			resCurrency: "uatom",
+			resNumeric:  "80405949465470000",
+			resExp:      18,
+			wantErr:     false,
 		},
 	}
 	for _, tt := range tests {
@@ -231,7 +237,10 @@ func TestGetDelegatorReward(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				fmt.Println(resp.Height)
-				require.Equal(t, resp.Rewards[0].Text, tt.resultText)
+				require.Equal(t, resp.Rewards[0].Text, tt.resText)
+				require.Equal(t, resp.Rewards[0].Currency, tt.resCurrency)
+				require.Equal(t, resp.Rewards[0].Numeric.String(), tt.resNumeric)
+				require.Equal(t, resp.Rewards[0].Exp, tt.resExp)
 			}
 		})
 	}
