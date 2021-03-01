@@ -45,7 +45,7 @@ func TestGetBlock(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			cli := api.NewClient(zl, conn, 10)
+			cli := api.NewClient(zl, conn, 10, "", "")
 			end := make(chan error, 10)
 			defer close(end)
 
@@ -107,7 +107,7 @@ func TestGetResponseConsistency(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			apiClient := api.NewClient(zl, conn, tt.args.reqsec)
+			apiClient := api.NewClient(zl, conn, tt.args.reqsec, "", "")
 			workerClient := client.NewIndexerClient(ctx, zl, apiClient, uint64(1000))
 
 			sr := newSendRegistry()
@@ -184,4 +184,64 @@ func (sR *sendRegistry) CheckForBlockRange(start, end uint64) (missing []uint64)
 
 func (sR *sendRegistry) Summary() string {
 	return fmt.Sprintf("Finished with blocks: %d transactions: %d errors: %d ends: %d other: %d", len(sR.blocks), len(sR.transactions), len(sR.errors), len(sR.ends), len(sR.other))
+}
+
+func TestGetDelegatorReward(t *testing.T) {
+	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
+	dataHubKey := "" // set your api key before testing
+	tests := []struct {
+		name        string
+		lcdAddr     string
+		dataHubKey  string
+		args        structs.HeightAccount
+		resText     string
+		resCurrency string
+		resNumeric  string
+		resExp      int32
+		wantErr     bool
+	}{
+		{
+			name:       "wrong delegator address syntax",
+			lcdAddr:    lcdAddr,
+			dataHubKey: dataHubKey,
+			args: structs.HeightAccount{
+				Account: "wrong delegator address",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "present delegator first reward at height",
+			lcdAddr:    lcdAddr,
+			dataHubKey: dataHubKey,
+			// see: https://www.mintscan.io/cosmos/account/cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0
+			args: structs.HeightAccount{
+				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
+				Height:  5217493,
+			},
+			resText:     "0.080405949465470000",
+			resCurrency: "uatom",
+			resNumeric:  "80405949465470000",
+			resExp:      18,
+			wantErr:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			zl := zaptest.NewLogger(t)
+			capi := api.NewClient(zl, nil, 10, tt.lcdAddr, tt.dataHubKey)
+			resp, err := capi.GetReward(ctx, tt.args)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				fmt.Println(resp.Height)
+				require.Equal(t, resp.Rewards[0].Text, tt.resText)
+				require.Equal(t, resp.Rewards[0].Currency, tt.resCurrency)
+				require.Equal(t, resp.Rewards[0].Numeric.String(), tt.resNumeric)
+				require.Equal(t, resp.Rewards[0].Exp, tt.resExp)
+			}
+		})
+	}
 }
