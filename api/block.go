@@ -39,7 +39,7 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 		blockCacheEfficiencyMissed.Inc()
 	}
 
-	if err := c.rateLimiter.Wait(ctx); err != nil {
+	if err := c.rateLimiterGRPC.Wait(ctx); err != nil {
 		return block, err
 	}
 

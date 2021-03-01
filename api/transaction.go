@@ -41,7 +41,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 		pag.Offset = (perPage * page) - perPage
 		now := time.Now()
 
-		if err = c.rateLimiter.Wait(ctx); err != nil {
+		if err = c.rateLimiterGRPC.Wait(ctx); err != nil {
 			return nil, err
 		}
 

@@ -16,30 +16,32 @@ type Client struct {
 	cli    *grpc.ClientConn
 	Sbc    *SimpleBlockCache
 
-	// rpc
+	// GRPC
 	txServiceClient tx.ServiceClient
 	tmServiceClient tmservice.ServiceClient
+	rateLimiterGRPC *rate.Limiter
 
-	//lcd
-	tendermintLCDAddr string
-	datahubKey        string
-	httpClient        *http.Client
-
-	rateLimiter *rate.Limiter
+	// LCD
+	cosmosLCDAddr  string
+	datahubKey     string
+	httpClient     *http.Client
+	rateLimiterLCD *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, tendermintLCDAddr, datahubKey string) *Client {
-	rateLimiter := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, cosmosLCDAddr, datahubKey string) *Client {
+	rateLimiterGRPC := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
+	rateLimiterLCD := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
 
 	return &Client{
-		logger:            logger,
-		rateLimiter:       rateLimiter,
-		Sbc:               NewSimpleBlockCache(400),
-		tmServiceClient:   tmservice.NewServiceClient(cli),
-		txServiceClient:   tx.NewServiceClient(cli),
-		tendermintLCDAddr: tendermintLCDAddr,
-		datahubKey:        datahubKey,
+		logger:          logger,
+		Sbc:             NewSimpleBlockCache(400),
+		tmServiceClient: tmservice.NewServiceClient(cli),
+		txServiceClient: tx.NewServiceClient(cli),
+		rateLimiterGRPC: rateLimiterGRPC,
+		cosmosLCDAddr:   cosmosLCDAddr,
+		datahubKey:      datahubKey,
+		rateLimiterLCD:  rateLimiterLCD,
 		httpClient: &http.Client{
 			Timeout: time.Second * 40,
 		},
