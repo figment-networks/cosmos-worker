@@ -29,9 +29,9 @@ type Config struct {
 
 	DataHubKey string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
 
-	CosmosLCDAddr  string `json:"cosmos_lcd_addr" envconfig:"COSMOS_LCD_ADDR"`
-	CosmosGRPCAddr string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
-	ChainID        string `json:"chain_id" envconfig:"CHAIN_ID"`
+	TendermintLCDAddr string `json:"tendermint_lcd_addr" envconfig:"TENDERMINT_LCD_ADDR"`
+	CosmosGRPCAddr    string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
+	ChainID           string `json:"chain_id" envconfig:"CHAIN_ID"`
 
 	Managers        string        `json:"managers" envconfig:"MANAGERS" default:"127.0.0.1:8085"`
 	ManagerInterval time.Duration `json:"manager_interval" envconfig:"MANAGER_INTERVAL" default:"10s"`
