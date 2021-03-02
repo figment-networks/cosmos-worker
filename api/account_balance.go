@@ -81,9 +81,9 @@ func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAcc
 
 	for _, blnc := range result.Result {
 		resp.Balances = append(resp.Balances,
-			structs.BalanceAmount{
-				Denom:  blnc.Denom,
-				Amount: blnc.Amount.BigInt(),
+			structs.TransactionAmount{
+				Text:     blnc.Amount.BigInt().String(),
+				Currency: blnc.Denom,
 			},
 		)
 	}

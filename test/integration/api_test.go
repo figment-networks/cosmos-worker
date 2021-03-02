@@ -249,12 +249,13 @@ func TestGetAccountBalance(t *testing.T) {
 	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
 	dataHubKey := "" // set your api key before testing
 	tests := []struct {
-		name       string
-		lcdAddr    string
-		dataHubKey string
-		args       structs.HeightAccount
-		resultText string
-		wantErr    bool
+		name        string
+		lcdAddr     string
+		dataHubKey  string
+		args        structs.HeightAccount
+		resText     string
+		resCurrency string
+		wantErr     bool
 	}{
 		{
 			name:       "wrong account address syntax",
@@ -274,8 +275,9 @@ func TestGetAccountBalance(t *testing.T) {
 				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
 				Height:  5217493,
 			},
-			resultText: "13182",
-			wantErr:    false,
+			resText:     "13182",
+			resCurrency: "uatom",
+			wantErr:     false,
 		},
 	}
 	for _, tt := range tests {
@@ -289,7 +291,10 @@ func TestGetAccountBalance(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, resp.Balances[0].Amount.String(), tt.resultText)
+				require.Equal(t, resp.Balances[0].Text, tt.resText)
+				require.Equal(t, resp.Balances[0].Currency, tt.resCurrency)
+				require.Equal(t, resp.Balances[0].Numeric, nil) // not available for cosmos
+				require.Equal(t, resp.Balances[0].Exp, 0)       // not available for cosmos
 			}
 		})
 	}
