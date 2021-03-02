@@ -293,8 +293,9 @@ func TestGetAccountBalance(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, resp.Balances[0].Text, tt.resText)
 				require.Equal(t, resp.Balances[0].Currency, tt.resCurrency)
-				require.Equal(t, resp.Balances[0].Numeric, nil) // not available for cosmos
-				require.Equal(t, resp.Balances[0].Exp, 0)       // not available for cosmos
+				var n *big.Int
+				require.Equal(t, resp.Balances[0].Numeric, n)    // not available for cosmos
+				require.Equal(t, resp.Balances[0].Exp, int32(0)) // not available for cosmos
 			}
 		})
 	}
