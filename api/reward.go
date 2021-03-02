@@ -26,7 +26,7 @@ const maxRetries = 3
 // GetReward fetches total rewards for delegator account
 func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error) {
 	resp.Height = params.Height
-	endpoint := fmt.Sprintf("%s/distribution/delegators/%v/rewards", c.tendermintLCDAddr, params.Account)
+	endpoint := fmt.Sprintf("%s/distribution/delegators/%v/rewards", c.cosmosLCDAddr, params.Account)
 
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 
 	req.URL.RawQuery = q.Encode()
 
-	err = c.rateLimiter.Wait(ctx)
+	err = c.rateLimiterLCD.Wait(ctx)
 	if err != nil {
 		return resp, err
 	}
