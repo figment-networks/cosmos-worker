@@ -23,7 +23,7 @@ type responseBalance struct {
 // GetAccountBalance fetches account balance
 func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountBalanceResponse, err error) {
 	resp.Height = params.Height
-	endpoint := fmt.Sprintf("%s/bank/balances/%v", c.tendermintLCDAddr, params.Account)
+	endpoint := fmt.Sprintf("%s/bank/balances/%v", c.cosmosLCDAddr, params.Account)
 
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -40,7 +40,7 @@ func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAcc
 
 	req.URL.RawQuery = q.Encode()
 
-	err = c.rateLimiter.Wait(ctx)
+	err = c.rateLimiterLCD.Wait(ctx)
 	if err != nil {
 		return resp, err
 	}
