@@ -236,11 +236,67 @@ func TestGetDelegatorReward(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				fmt.Println(resp.Height)
 				require.Equal(t, resp.Rewards[0].Text, tt.resText)
 				require.Equal(t, resp.Rewards[0].Currency, tt.resCurrency)
 				require.Equal(t, resp.Rewards[0].Numeric.String(), tt.resNumeric)
 				require.Equal(t, resp.Rewards[0].Exp, tt.resExp)
+			}
+		})
+	}
+}
+
+func TestGetAccountBalance(t *testing.T) {
+	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
+	dataHubKey := "" // set your api key before testing
+	tests := []struct {
+		name        string
+		lcdAddr     string
+		dataHubKey  string
+		args        structs.HeightAccount
+		resText     string
+		resCurrency string
+		wantErr     bool
+	}{
+		{
+			name:       "wrong account address syntax",
+			lcdAddr:    lcdAddr,
+			dataHubKey: dataHubKey,
+			args: structs.HeightAccount{
+				Account: "wrong account address",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "present account address",
+			lcdAddr:    lcdAddr,
+			dataHubKey: dataHubKey,
+			// see: https://www.mintscan.io/cosmos/account/cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0
+			args: structs.HeightAccount{
+				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
+				Height:  5217493,
+			},
+			resText:     "13182",
+			resCurrency: "uatom",
+			wantErr:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			zl := zaptest.NewLogger(t)
+			capi := api.NewClient(zl, nil, 10, tt.lcdAddr, tt.dataHubKey)
+			resp, err := capi.GetAccountBalance(ctx, tt.args)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, resp.Balances[0].Text, tt.resText)
+				require.Equal(t, resp.Balances[0].Currency, tt.resCurrency)
+				n := new(big.Int)
+				n.SetString(tt.resText, 10)
+				require.Equal(t, resp.Balances[0].Numeric, n)
+				require.Equal(t, resp.Balances[0].Exp, int32(0)) // not available for cosmos
 			}
 		})
 	}
