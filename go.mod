@@ -7,7 +7,7 @@ replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alp
 require (
 	github.com/bearcherian/rollzap v1.0.2
 	github.com/cosmos/cosmos-sdk v0.40.0
-	github.com/figment-networks/indexer-manager v0.0.9
+	github.com/figment-networks/indexer-manager v0.1.0
 	github.com/figment-networks/indexing-engine v0.1.14
 	github.com/gogo/protobuf v1.3.1
 	github.com/google/uuid v1.1.2

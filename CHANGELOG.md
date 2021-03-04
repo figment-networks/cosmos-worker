@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.1.2] - 2021-03-04
+
+### Added
+Adds method to fetch account balance for account
+### Changed
+### Fixed
+
 ## [0.1.1] - 2021-02-16
 
 ### Added
