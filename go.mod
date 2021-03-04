@@ -8,7 +8,7 @@ require (
 	github.com/bearcherian/rollzap v1.0.2
 	github.com/cosmos/cosmos-sdk v0.40.0
 	github.com/figment-networks/indexer-manager v0.1.0
-	github.com/figment-networks/indexing-engine v0.1.14
+	github.com/figment-networks/indexing-engine v0.2.1
 	github.com/gogo/protobuf v1.3.1
 	github.com/google/uuid v1.1.2
 	github.com/kelseyhightower/envconfig v1.4.0

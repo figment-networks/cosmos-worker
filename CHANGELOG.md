@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.1.3] - 2021-03-04
+
+### Added
+### Changed
+go.mod file
+### Fixed
+
 ## [0.1.2] - 2021-03-04
 
 ### Added
