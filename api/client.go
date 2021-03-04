@@ -1,69 +1,51 @@
 package api
 
 import (
-	"net/http"
-	"time"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
+	"github.com/cosmos/cosmos-sdk/types/tx"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
+	"google.golang.org/grpc"
+	"net/http"
+	"time"
 )
 
-// Client is a Tendermint RPC client for cosmos using figmentnetworks datahub
+// Client  ads
 type Client struct {
-	baseURL    string
-	key        string
-	httpClient *http.Client
-	cdc        *codec.Codec
-	logger     *zap.Logger
+	logger *zap.Logger
+	cli    *grpc.ClientConn
+	Sbc    *SimpleBlockCache
 
-	rateLimiter *rate.Limiter
-	Sbc         *SimpleBlockCache
+	// GRPC
+	txServiceClient tx.ServiceClient
+	tmServiceClient tmservice.ServiceClient
+	rateLimiterGRPC *rate.Limiter
+
+	// LCD
+	cosmosLCDAddr  string
+	datahubKey     string
+	httpClient     *http.Client
+	rateLimiterLCD *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(url, key string, logger *zap.Logger, c *http.Client, reqPerSecLimit int) *Client {
-	if c == nil {
-		c = &http.Client{
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, cosmosLCDAddr, datahubKey string) *Client {
+	rateLimiterGRPC := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
+	rateLimiterLCD := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
+
+	return &Client{
+		logger:          logger,
+		Sbc:             NewSimpleBlockCache(400),
+		tmServiceClient: tmservice.NewServiceClient(cli),
+		txServiceClient: tx.NewServiceClient(cli),
+		rateLimiterGRPC: rateLimiterGRPC,
+		cosmosLCDAddr:   cosmosLCDAddr,
+		datahubKey:      datahubKey,
+		rateLimiterLCD:  rateLimiterLCD,
+		httpClient: &http.Client{
 			Timeout: time.Second * 40,
-		}
+		},
 	}
-
-	rateLimiter := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
-
-	cli := &Client{
-		logger:      logger,
-		baseURL:     url, //tendermint rpc url
-		key:         key,
-		httpClient:  c,
-		rateLimiter: rateLimiter,
-		cdc:         makeCodec(),
-		Sbc:         NewSimpleBlockCache(400),
-	}
-	return cli
-}
-
-func makeCodec() *codec.Codec {
-	var cdc = codec.New()
-	bank.RegisterCodec(cdc)
-	staking.RegisterCodec(cdc)
-	distr.RegisterCodec(cdc)
-	slashing.RegisterCodec(cdc)
-	gov.RegisterCodec(cdc)
-	crisis.RegisterCodec(cdc)
-	auth.RegisterCodec(cdc)
-	sdk.RegisterCodec(cdc)
-	codec.RegisterCrypto(cdc)
-	codec.RegisterEvidences(cdc)
-	return cdc
 }
 
 // InitMetrics initialise metrics

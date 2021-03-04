@@ -104,12 +104,26 @@ func main() {
 
 	go c.Run(ctx, logger.GetLogger(), cfg.ManagerInterval)
 
+	if cfg.CosmosGRPCAddr == "" {
+		logger.Error(fmt.Errorf("cosmos grpc address is not set"))
+		return
+	}
+	grpcConn, dialErr := grpc.DialContext(ctx, cfg.CosmosGRPCAddr, grpc.WithInsecure())
+	if dialErr != nil {
+		logger.Error(fmt.Errorf("error dialing grpc: %w", dialErr))
+		return
+	}
+	defer grpcConn.Close()
+
+	if cfg.TendermintLCDAddr == "" || cfg.DataHubKey == "" {
+		logger.Error(fmt.Errorf(" lcd info is not set"))
+		return
+	}
+
+	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond), cfg.TendermintLCDAddr, cfg.DataHubKey)
+
 	grpcServer := grpc.NewServer()
-
-	rpcClient := api.NewClient(cfg.TendermintRPCAddr, cfg.DatahubKey, logger.GetLogger(), nil, int(cfg.RequestsPerSecond))
-	lcdClient := api.NewClient(cfg.TendermintLCDAddr, cfg.DatahubKey, logger.GetLogger(), nil, int(cfg.RequestsPerSecond))
-
-	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), rpcClient, lcdClient, uint64(cfg.BigPage), uint64(cfg.MaximumHeightsToGet))
+	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.MaximumHeightsToGet))
 
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())
 	grpcProtoIndexer.RegisterIndexerServiceServer(grpcServer, worker)
@@ -175,7 +189,7 @@ func initConfig(path string) (*config.Config, error) {
 		}
 	}
 
-	if cfg.TendermintRPCAddr != "" {
+	if cfg.CosmosGRPCAddr != "" {
 		return cfg, nil
 	}
 

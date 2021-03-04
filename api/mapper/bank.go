@@ -1,20 +1,20 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
-	"github.com/figment-networks/cosmos-worker/api/types"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	bank "github.com/cosmos/cosmos-sdk/x/bank"
+	"github.com/cosmos/cosmos-sdk/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // BankMultisendToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
-func BankMultisendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	multisend, ok := msg.(bank.MsgMultiSend)
-	if !ok {
-		return se, errors.New("Not a multisend type")
+func BankMultisendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
+	multisend := &bank.MsgMultiSend{}
+	if err := proto.Unmarshal(msg, multisend); err != nil {
+		return se, fmt.Errorf("Not a multisend type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -37,15 +37,15 @@ func BankMultisendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEven
 		se.Recipient = append(se.Recipient, evt)
 	}
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, "send", "", lg)
 	return se, err
 }
 
 // BankSendToSub transforms bank.MsgSend sdk messages to SubsetEvent
-func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	send, ok := msg.(bank.MsgSend)
-	if !ok {
-		return se, errors.New("Not a send type")
+func BankSendToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
+	send := &bank.MsgSend{}
+	if err := proto.Unmarshal(msg, send); err != nil {
+		return se, fmt.Errorf("Not a send type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
@@ -59,14 +59,13 @@ func BankSendToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, er
 	evt, _ = bankProduceEvTx(send.ToAddress, send.Amount)
 	se.Recipient = append(se.Recipient, evt)
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, "send", "", lg)
 	return se, err
 }
 
-func bankProduceEvTx(account sdk.AccAddress, coins sdk.Coins) (evt shared.EventTransfer, err error) {
-
+func bankProduceEvTx(account string, coins types.Coins) (evt shared.EventTransfer, err error) {
 	evt = shared.EventTransfer{
-		Account: shared.Account{ID: account.String()},
+		Account: shared.Account{ID: account},
 	}
 	if len(coins) > 0 {
 		evt.Amounts = []shared.TransactionAmount{}

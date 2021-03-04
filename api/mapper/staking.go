@@ -1,33 +1,27 @@
 package mapper
 
 import (
-	"errors"
 	"fmt"
-	"math/big"
 
-	"github.com/figment-networks/cosmos-worker/api/types"
-	"github.com/figment-networks/cosmos-worker/api/util"
 	shared "github.com/figment-networks/indexer-manager/structs"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	staking "github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/types"
+	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/gogo/protobuf/proto"
 )
 
-const unbondedTokensPoolAddr = "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r"
-
 // StakingUndelegateToSub transforms staking.MsgUndelegate sdk messages to SubsetEvent
-func StakingUndelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	u, ok := msg.(staking.MsgUndelegate)
-	if !ok {
-		return se, errors.New("Not a begin_unbonding type")
+func StakingUndelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
+	u := &staking.MsgUndelegate{}
+	if err := proto.Unmarshal(msg, u); err != nil {
+		return se, fmt.Errorf("Not a undelegate type: %w", err)
 	}
-
 	se = shared.SubsetEvent{
-		Type:   []string{"begin_unbonding"},
+		Type:   []string{"undelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: u.DelegatorAddress.String()}},
-			"validator": {{ID: u.ValidatorAddress.String()}},
+			"delegator": {{ID: u.DelegatorAddress}},
+			"validator": {{ID: u.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"undelegate": {
@@ -38,75 +32,23 @@ func StakingUndelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.Subset
 		},
 	}
 
-	var withdrawAddr string
-	rewards := []shared.TransactionAmount{}
-	for _, ev := range logf.Events {
-		if ev.Type != "transfer" {
-			continue
-		}
-
-		var latestRecipient string
-		for _, attr := range ev.Attributes {
-			if len(attr.Recipient) > 0 {
-				latestRecipient = attr.Recipient[0]
-			}
-			if latestRecipient == unbondedTokensPoolAddr {
-				continue
-			}
-			withdrawAddr = latestRecipient
-
-			for _, amount := range attr.Amount {
-				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
-				sliced := util.GetCurrency(amount)
-				var (
-					c       *big.Int
-					exp     int32
-					coinErr error
-				)
-				if len(sliced) == 3 {
-					attrAmt.Currency = sliced[2]
-					c, exp, coinErr = util.GetCoin(sliced[1])
-				} else {
-					c, exp, coinErr = util.GetCoin(amount)
-				}
-				if coinErr != nil {
-					return se, fmt.Errorf("[COSMOS-API] Error parsing amount '%s': %s ", amount, coinErr)
-				}
-				attrAmt.Text = amount
-				attrAmt.Numeric.Set(c)
-				attrAmt.Exp = exp
-				if attrAmt.Numeric.Cmp(&zero) != 0 {
-					rewards = append(rewards, attrAmt)
-				}
-			}
-		}
-	}
-
-	if len(rewards) == 0 {
-		return se, nil
-	}
-	se.Transfers = map[string][]shared.EventTransfer{
-		"reward": []shared.EventTransfer{{
-			Amounts: rewards,
-			Account: shared.Account{ID: withdrawAddr},
-		}},
-	}
-
-	return se, nil
+	err = produceTransfers(&se, "reward", "unbondedAddr", lg) // todo
+	return se, err
 }
 
 // StakingDelegateToSub transforms staking.MsgDelegate sdk messages to SubsetEvent
-func StakingDelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	d, ok := msg.(staking.MsgDelegate)
-	if !ok {
-		return se, errors.New("Not a delegate type")
+func StakingDelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
+	d := &staking.MsgDelegate{}
+	if err := proto.Unmarshal(msg, d); err != nil {
+		return se, fmt.Errorf("Not a delegate type: %w", err)
 	}
+
 	se = shared.SubsetEvent{
 		Type:   []string{"delegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: d.DelegatorAddress.String()}},
-			"validator": {{ID: d.ValidatorAddress.String()}},
+			"delegator": {{ID: d.DelegatorAddress}},
+			"validator": {{ID: d.ValidatorAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -117,24 +59,24 @@ func StakingDelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEv
 		},
 	}
 
-	err = produceTransfers(&se, TransferTypeReward, logf)
+	err = produceTransfers(&se, "reward", "", lg)
 	return se, err
 }
 
 // StakingBeginRedelegateToSub transforms staking.MsgBeginRedelegate sdk messages to SubsetEvent
-func StakingBeginRedelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.SubsetEvent, err error) {
-	br, ok := msg.(staking.MsgBeginRedelegate)
-	if !ok {
-		return se, errors.New("Not a begin_redelegate type")
+func StakingBeginRedelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
+	br := &staking.MsgBeginRedelegate{}
+	if err := proto.Unmarshal(msg, br); err != nil {
+		return se, fmt.Errorf("Not a begin_redelegate type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
 		Type:   []string{"begin_redelegate"},
 		Module: "staking",
 		Node: map[string][]shared.Account{
-			"delegator":             {{ID: br.DelegatorAddress.String()}},
-			"validator_destination": {{ID: br.ValidatorDstAddress.String()}},
-			"validator_source":      {{ID: br.ValidatorSrcAddress.String()}},
+			"delegator":             {{ID: br.DelegatorAddress}},
+			"validator_destination": {{ID: br.ValidatorDstAddress}},
+			"validator_source":      {{ID: br.ValidatorDstAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
@@ -145,24 +87,24 @@ func StakingBeginRedelegateToSub(msg sdk.Msg, logf types.LogFormat) (se shared.S
 		},
 	}
 
-	err = produceTransfers(&se, TransferTypeReward, logf)
+	err = produceTransfers(&se, "reward", "", lg)
 	return se, err
 }
 
 // StakingCreateValidatorToSub transforms staking.MsgCreateValidator sdk messages to SubsetEvent
-func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgCreateValidator)
-	if !ok {
-		return se, errors.New("Not a create_validator type")
+func StakingCreateValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgCreateValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, fmt.Errorf("Not a create_validator type: %w", err)
 	}
 	return shared.SubsetEvent{
 		Type:   []string{"create_validator"},
 		Module: "distribution",
 		Node: map[string][]shared.Account{
-			"delegator": {{ID: ev.DelegatorAddress.String()}},
+			"delegator": {{ID: ev.DelegatorAddress}},
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -184,24 +126,24 @@ func StakingCreateValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error)
 			},
 			"commission_rate": {
 				Text:    ev.Commission.Rate.String(),
-				Numeric: ev.Commission.Rate.Int,
+				Numeric: ev.Commission.Rate.BigInt(),
 			},
 			"commission_max_rate": {
 				Text:    ev.Commission.MaxRate.String(),
-				Numeric: ev.Commission.MaxRate.Int,
+				Numeric: ev.Commission.MaxRate.BigInt(),
 			},
 			"commission_max_change_rate": {
 				Text:    ev.Commission.MaxChangeRate.String(),
-				Numeric: ev.Commission.MaxChangeRate.Int,
+				Numeric: ev.Commission.MaxChangeRate.BigInt(),
 			}},
 	}, err
 }
 
 // StakingEditValidatorToSub transforms staking.MsgEditValidator sdk messages to SubsetEvent
-func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
-	ev, ok := msg.(staking.MsgEditValidator)
-	if !ok {
-		return se, errors.New("Not a edit_validator type")
+func StakingEditValidatorToSub(msg []byte) (se shared.SubsetEvent, err error) {
+	ev := &staking.MsgEditValidator{}
+	if err := proto.Unmarshal(msg, ev); err != nil {
+		return se, fmt.Errorf("Not a edit_validator type: %w", err)
 	}
 	sev := shared.SubsetEvent{
 		Type:   []string{"edit_validator"},
@@ -209,7 +151,7 @@ func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 		Node: map[string][]shared.Account{
 			"validator": {
 				{
-					ID: ev.ValidatorAddress.String(),
+					ID: ev.ValidatorAddress,
 					Details: &shared.AccountDetails{
 						Name:        ev.Description.Moniker,
 						Description: ev.Description.Details,
@@ -233,7 +175,7 @@ func StakingEditValidatorToSub(msg sdk.Msg) (se shared.SubsetEvent, err error) {
 		if ev.CommissionRate != nil {
 			sev.Amount["commission_rate"] = shared.TransactionAmount{
 				Text:    ev.CommissionRate.String(),
-				Numeric: ev.CommissionRate.Int,
+				Numeric: ev.CommissionRate.BigInt(),
 			}
 		}
 	}

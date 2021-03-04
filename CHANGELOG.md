@@ -1,62 +1,32 @@
 # Change Log
 
-## [0.0.7] - 2021-01-28
-
-### Added
-- Adds  method to fetch rewards for height
-- New config variable "tendermint_lcd_addr"
-
-### Changed
-### Fixed
-- "validator_source" field is now correct value (was previously repeating validator destination)
-
-## [0.0.6] - 2020-12-29
-
-### Added
-- Field "transfers" in "sub" of transaction events. This contains "reward" and "send" transfers containing amount and recipient information.
-### Changed
-### Fixed
-
-
-## [0.0.5] - 2020-12-02
+## [0.1.3] - 2021-03-04
 
 ### Added
 ### Changed
+go.mod file
 ### Fixed
-- Fallback in transactions on message type error
-- Dynamic log level switch
 
-## [0.0.4] - 2020-12-01
+## [0.1.2] - 2021-03-04
 
 ### Added
-- Transaction objects are having log field filled with transaction log data
-- '/loglevel' endpoint for dynamically changing log level
+Adds method to fetch account balance for account
+### Changed
+### Fixed
+
+## [0.1.1] - 2021-02-16
+
+### Added
 
 ### Changed
 ### Fixed
-- Errors from transaction logs are now as well populated
+- Added missing ibc transfer type transaction: "transfer"
+- Added missing ibc channel type transactions: "channel_open_confirm", "channel_open_ack", "channel_open_try", "channel_close_init", "channel_close_confirm", "recv_packet", "timeout", "channel_acknowledgement"
 
-
-## [0.0.3] - 2020-11-17
-
-### Added
-- Plugin from populator that adds ability for parse the fee from raw transaction
-### Changed
-### Fixed
-- Fee is noe populated properly for scraped items
-
-
-## [0.0.2] - 2020-11-03
+## [0.1.0] - 2021-02-12
 
 ### Added
-### Changed
-### Fixed
-- Decoder issue after error in the beginning of the transaction list.
+- Initial release
 
-## [0.0.1] - 2020-10-28
-
-Initial release
-
-### Added
 ### Changed
 ### Fixed

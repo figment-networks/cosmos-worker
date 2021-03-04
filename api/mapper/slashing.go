@@ -1,24 +1,24 @@
 package mapper
 
 import (
-	"errors"
+	"fmt"
 
 	shared "github.com/figment-networks/indexer-manager/structs"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	slashing "github.com/cosmos/cosmos-sdk/x/slashing"
+	slashing "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // SlashingUnjailToSub transforms slashing.MsgUnjail sdk messages to SubsetEvent
-func SlashingUnjailToSub(msg sdk.Msg) (se shared.SubsetEvent, er error) {
-	unjail, ok := msg.(slashing.MsgUnjail)
-	if !ok {
-		return se, errors.New("Not a unjail type")
+func SlashingUnjailToSub(msg []byte) (se shared.SubsetEvent, er error) {
+	unjail := &slashing.MsgUnjail{}
+	if err := proto.Unmarshal(msg, unjail); err != nil {
+		return se, fmt.Errorf("Not a unjail type: %w", err)
 	}
 
 	return shared.SubsetEvent{
 		Type:   []string{"unjail"},
 		Module: "slashing",
-		Node:   map[string][]shared.Account{"validator": {{ID: unjail.ValidatorAddr.String()}}},
+		Node:   map[string][]shared.Account{"validator": {{ID: unjail.ValidatorAddr}}},
 	}, nil
 }
