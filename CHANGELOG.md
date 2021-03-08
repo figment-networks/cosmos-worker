@@ -1,4 +1,11 @@
 # Change Log
+## [0.1.4] - 2021-03-08
+
+### Added
+### Changed
+### Fixed
+Wrong source validator in begin_redelegate [https://github.com/figment-networks/cosmos-worker/pull/19](PR #19)
+
 
 ## [0.1.3] - 2021-03-04
 
