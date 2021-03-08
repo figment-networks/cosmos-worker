@@ -45,7 +45,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 			return nil, err
 		}
 
-		nctx, cancel := context.WithTimeout(ctx, time.Second*10)
+		nctx, cancel := context.WithTimeout(ctx, c.cfg.TimeoutSearchTxCall)
 		grpcRes, err := c.txServiceClient.GetTxsEvent(nctx, &tx.GetTxsEventRequest{
 			Events:     []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
 			Pagination: pag,

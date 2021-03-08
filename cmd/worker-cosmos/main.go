@@ -120,7 +120,11 @@ func main() {
 		return
 	}
 
-	apiClient := api.NewClient(logger.GetLogger(), grpcConn, int(cfg.RequestsPerSecond), cfg.TendermintLCDAddr, cfg.DataHubKey)
+	apiClient := api.NewClient(logger.GetLogger(), grpcConn, &api.ClientConfig{
+		ReqPerSecond:        int(cfg.RequestsPerSecond),
+		TimeoutBlockCall:    cfg.TimeoutBlockCall,
+		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
+	}, cfg.TendermintLCDAddr, cfg.DataHubKey)
 
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.MaximumHeightsToGet))

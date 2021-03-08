@@ -43,7 +43,7 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 		return block, err
 	}
 
-	nctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	nctx, cancel := context.WithTimeout(ctx, c.cfg.TimeoutBlockCall)
 	defer cancel()
 	n := time.Now()
 	if params.Height == 0 {
