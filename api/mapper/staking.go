@@ -76,7 +76,7 @@ func StakingBeginRedelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared
 		Node: map[string][]shared.Account{
 			"delegator":             {{ID: br.DelegatorAddress}},
 			"validator_destination": {{ID: br.ValidatorDstAddress}},
-			"validator_source":      {{ID: br.ValidatorDstAddress}},
+			"validator_source":      {{ID: br.ValidatorSrcAddress}},
 		},
 		Amount: map[string]shared.TransactionAmount{
 			"delegate": {
