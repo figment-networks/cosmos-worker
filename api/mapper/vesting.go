@@ -11,7 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// VestingMsgCreateVestingAccountToSub transforms bank.MsgMultiSend sdk messages to SubsetEvent
+// VestingMsgCreateVestingAccountToSub transforms vesting.MsgCreateVestingAccount sdk messages to SubsetEvent
 func VestingMsgCreateVestingAccountToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 
 	cva := &vesting.MsgCreateVestingAccount{}
