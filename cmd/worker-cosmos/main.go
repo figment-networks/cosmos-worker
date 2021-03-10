@@ -123,6 +123,7 @@ func main() {
 
 	apiClient := api.NewClient(logger.GetLogger(), grpcConn, &api.ClientConfig{
 		ReqPerSecond:        int(cfg.RequestsPerSecond),
+		ReqPerSecondLCD:     int(cfg.RequestsPerSecondLCD),
 		TimeoutBlockCall:    cfg.TimeoutBlockCall,
 		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
 	}, cfg.TendermintLCDAddr, cfg.DataHubKey)
@@ -137,7 +138,6 @@ func main() {
 	attachProfiling(mux)
 
 	monitor := &health.Monitor{}
-
 	go monitor.RunChecks(ctx, cfg.HealthCheckInterval)
 	monitor.AttachHttp(mux)
 

@@ -13,6 +13,7 @@ import (
 
 type ClientConfig struct {
 	ReqPerSecond        int
+	ReqPerSecondLCD     int
 	TimeoutBlockCall    time.Duration
 	TimeoutSearchTxCall time.Duration
 }
@@ -40,7 +41,7 @@ type Client struct {
 // NewClient returns a new client for a given endpoint
 func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosmosLCDAddr, datahubKey string) *Client {
 	rateLimiterGRPC := rate.NewLimiter(rate.Limit(cfg.ReqPerSecond), cfg.ReqPerSecond)
-	rateLimiterLCD := rate.NewLimiter(rate.Limit(cfg.ReqPerSecond), cfg.ReqPerSecond)
+	rateLimiterLCD := rate.NewLimiter(rate.Limit(cfg.ReqPerSecondLCD), cfg.ReqPerSecondLCD)
 
 	return &Client{
 		logger:          logger,
