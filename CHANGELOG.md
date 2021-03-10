@@ -1,23 +1,36 @@
 # Change Log
+
+
+## [0.1.5] - 2021-03-08
+
+### Added
+- Configurable timeouts for grpc connections
+- Vesting message type
+
+### Changed
+- Bumped cosmos-sdk library to 0.42.0
+### Fixed
+
+
 ## [0.1.4] - 2021-03-08
 
 ### Added
 ### Changed
 ### Fixed
-Wrong source validator in begin_redelegate [https://github.com/figment-networks/cosmos-worker/pull/19](PR #19)
+- Wrong source validator in begin_redelegate [https://github.com/figment-networks/cosmos-worker/pull/19](PR #19)
 
 
 ## [0.1.3] - 2021-03-04
 
 ### Added
 ### Changed
-go.mod file
+- go.mod file
 ### Fixed
 
 ## [0.1.2] - 2021-03-04
 
 ### Added
-Adds method to fetch account balance for account
+- Adds method to fetch account balance for account
 ### Changed
 ### Fixed
 
