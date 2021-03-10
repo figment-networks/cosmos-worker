@@ -16,12 +16,13 @@ func VestingMsgCreateVestingAccountToSub(msg []byte, lg types.ABCIMessageLog) (s
 
 	cva := &vesting.MsgCreateVestingAccount{}
 	if err := proto.Unmarshal(msg, cva); err != nil {
-		return se, fmt.Errorf("Not a multisend type: %w", err)
+		return se, fmt.Errorf("Not a msg_create_vesting_account type: %w", err)
 	}
 
 	se = shared.SubsetEvent{
-		Type:   []string{"msg_create_vesting_account"},
-		Module: "vesting",
+		Type:       []string{"msg_create_vesting_account"},
+		Module:     "vesting",
+		Additional: make(map[string][]string),
 	}
 
 	evt, _ := vestingProduceEvTx(cva.FromAddress, cva.Amount)
