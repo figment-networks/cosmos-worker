@@ -233,6 +233,13 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		default:
 			err = fmt.Errorf("Unknown slashing message Type")
 		}
+	case "vesting":
+		switch msgType {
+		case "MsgCreateVestingAccount":
+			ev, err = mapper.VestingMsgCreateVestingAccountToSub(m.Value, lg)
+		default:
+			err = fmt.Errorf("Unknown vesting message Type")
+		}
 	case "staking":
 		switch msgType {
 		case "MsgUndelegate":
