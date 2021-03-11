@@ -213,10 +213,7 @@ func (ic *IndexerClient) GetBlock(ctx context.Context, tr cStructs.TaskRequest, 
 		return
 	}
 
-	sCtx, cancel := context.WithTimeout(ctx, time.Second*20)
-	defer cancel()
-
-	block, err := client.GetBlock(sCtx, *hr)
+	block, err := client.GetBlock(ctx, *hr)
 	if err != nil {
 		ic.logger.Error("Error getting block", zap.Error(err))
 		stream.Send(cStructs.TaskResponse{

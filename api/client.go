@@ -1,16 +1,24 @@
 package api
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
-	"net/http"
-	"time"
 )
 
-// Client  ads
+type ClientConfig struct {
+	ReqPerSecond        int
+	ReqPerSecondLCD     int
+	TimeoutBlockCall    time.Duration
+	TimeoutSearchTxCall time.Duration
+}
+
+// Client
 type Client struct {
 	logger *zap.Logger
 	cli    *grpc.ClientConn
@@ -21,6 +29,8 @@ type Client struct {
 	tmServiceClient tmservice.ServiceClient
 	rateLimiterGRPC *rate.Limiter
 
+	cfg *ClientConfig
+
 	// LCD
 	cosmosLCDAddr  string
 	datahubKey     string
@@ -29,9 +39,9 @@ type Client struct {
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, cosmosLCDAddr, datahubKey string) *Client {
-	rateLimiterGRPC := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
-	rateLimiterLCD := rate.NewLimiter(rate.Limit(reqPerSecLimit), reqPerSecLimit)
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosmosLCDAddr, datahubKey string) *Client {
+	rateLimiterGRPC := rate.NewLimiter(rate.Limit(cfg.ReqPerSecond), cfg.ReqPerSecond)
+	rateLimiterLCD := rate.NewLimiter(rate.Limit(cfg.ReqPerSecondLCD), cfg.ReqPerSecondLCD)
 
 	return &Client{
 		logger:          logger,
@@ -41,6 +51,7 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, reqPerSecLimit int, cos
 		rateLimiterGRPC: rateLimiterGRPC,
 		cosmosLCDAddr:   cosmosLCDAddr,
 		datahubKey:      datahubKey,
+		cfg:             cfg,
 		rateLimiterLCD:  rateLimiterLCD,
 		httpClient: &http.Client{
 			Timeout: time.Second * 40,

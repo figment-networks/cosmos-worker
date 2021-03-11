@@ -2,17 +2,17 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/rest"
-	"strconv"
-
-	"github.com/figment-networks/indexer-manager/structs"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
-	"encoding/json"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/rest"
+
+	"github.com/figment-networks/indexer-manager/structs"
 )
 
 type responseBalance struct {

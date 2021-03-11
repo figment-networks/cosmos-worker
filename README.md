@@ -58,6 +58,8 @@ List of currently supported transaction types in cosmos-worker are (listed by mo
     `unjail`
 - staking:
     `begin_unbonding` , `edit_validator` , `create_validator` , `delegate` , `begin_redelegate`
+- vesting:
+    `msg_create_vesting_account`
 - internal:
     `error`
 
