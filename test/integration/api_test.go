@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/figment-networks/cosmos-worker/api"
 	"github.com/figment-networks/cosmos-worker/client"
@@ -45,7 +46,11 @@ func TestGetBlock(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			cli := api.NewClient(zl, conn, 10, "", "")
+			cli := api.NewClient(zl, conn, &api.ClientConfig{
+				ReqPerSecond:        30,
+				TimeoutBlockCall:    time.Second * 60,
+				TimeoutSearchTxCall: time.Second * 60,
+			}, "", "")
 			end := make(chan error, 10)
 			defer close(end)
 
@@ -107,7 +112,11 @@ func TestGetResponseConsistency(t *testing.T) {
 			api.InitMetrics()
 			conn, err := grpc.Dial(tt.args.address, grpc.WithInsecure())
 			require.NoError(t, err)
-			apiClient := api.NewClient(zl, conn, tt.args.reqsec, "", "")
+			apiClient := api.NewClient(zl, conn, &api.ClientConfig{
+				ReqPerSecond:        tt.args.reqsec,
+				TimeoutBlockCall:    time.Second * 60,
+				TimeoutSearchTxCall: time.Second * 60,
+			}, "", "")
 			workerClient := client.NewIndexerClient(ctx, zl, apiClient, uint64(1000))
 
 			sr := newSendRegistry()
@@ -229,7 +238,11 @@ func TestGetDelegatorReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			zl := zaptest.NewLogger(t)
-			capi := api.NewClient(zl, nil, 10, tt.lcdAddr, tt.dataHubKey)
+			capi := api.NewClient(zl, nil, &api.ClientConfig{
+				ReqPerSecond:        30,
+				TimeoutBlockCall:    time.Second * 60,
+				TimeoutSearchTxCall: time.Second * 60,
+			}, tt.lcdAddr, tt.dataHubKey)
 			resp, err := capi.GetReward(ctx, tt.args)
 
 			if tt.wantErr {
@@ -284,7 +297,12 @@ func TestGetAccountBalance(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			zl := zaptest.NewLogger(t)
-			capi := api.NewClient(zl, nil, 10, tt.lcdAddr, tt.dataHubKey)
+
+			capi := api.NewClient(zl, nil, &api.ClientConfig{
+				ReqPerSecond:        30,
+				TimeoutBlockCall:    time.Second * 60,
+				TimeoutSearchTxCall: time.Second * 60,
+			}, tt.lcdAddr, tt.dataHubKey)
 			resp, err := capi.GetAccountBalance(ctx, tt.args)
 
 			if tt.wantErr {

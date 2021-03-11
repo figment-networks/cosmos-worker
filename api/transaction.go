@@ -45,7 +45,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 			return nil, err
 		}
 
-		nctx, cancel := context.WithTimeout(ctx, time.Second*10)
+		nctx, cancel := context.WithTimeout(ctx, c.cfg.TimeoutSearchTxCall)
 		grpcRes, err := c.txServiceClient.GetTxsEvent(nctx, &tx.GetTxsEventRequest{
 			Events:     []string{"tx.height=" + strconv.FormatUint(r.Height, 10)},
 			Pagination: pag,
@@ -232,6 +232,13 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 			ev, err = mapper.SlashingUnjailToSub(m.Value)
 		default:
 			err = fmt.Errorf("Unknown slashing message Type")
+		}
+	case "vesting":
+		switch msgType {
+		case "MsgCreateVestingAccount":
+			ev, err = mapper.VestingMsgCreateVestingAccountToSub(m.Value, lg)
+		default:
+			err = fmt.Errorf("Unknown vesting message Type")
 		}
 	case "staking":
 		switch msgType {
