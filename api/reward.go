@@ -58,14 +58,13 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		} else if err != nil {
 			return resp, err
 		}
-		rawRequestDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
+		rawRequestHTTPDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
 
 		defer cliResp.Body.Close()
 
 		if cliResp.StatusCode < 500 {
 			break
 		}
-		time.Sleep(time.Duration(i*500) * time.Millisecond)
 	}
 
 	decoder := json.NewDecoder(cliResp.Body)
