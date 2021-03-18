@@ -33,10 +33,8 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 	if params.Height != 0 {
 		block, ok = c.Sbc.Get(params.Height)
 		if ok {
-			blockCacheEfficiencyHit.Inc()
 			return block, nil
 		}
-		blockCacheEfficiencyMissed.Inc()
 	}
 
 	if err := c.rateLimiterGRPC.Wait(ctx); err != nil {
@@ -49,10 +47,10 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 	if params.Height == 0 {
 		lb, err := c.tmServiceClient.GetLatestBlock(nctx, &tmservice.GetLatestBlockRequest{})
 		if err != nil {
-			rawRequestDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
+			rawRequestGRPCDuration.WithLabels("GetLatestBlock", "error").Observe(time.Since(n).Seconds())
 			return block, err
 		}
-		rawRequestDuration.WithLabels("GetBlockByHeight", "ok").Observe(time.Since(n).Seconds())
+		rawRequestGRPCDuration.WithLabels("GetLatestBlock", "ok").Observe(time.Since(n).Seconds())
 
 		bh := bytes.HexBytes(lb.BlockId.Hash)
 
@@ -70,10 +68,10 @@ func (c *Client) GetBlock(ctx context.Context, params structs.HeightHash) (block
 
 	bbh, err := c.tmServiceClient.GetBlockByHeight(nctx, &tmservice.GetBlockByHeightRequest{Height: int64(params.Height)}, grpc.WaitForReady(true))
 	if err != nil {
-		rawRequestDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
+		rawRequestGRPCDuration.WithLabels("GetBlockByHeight", "error").Observe(time.Since(n).Seconds())
 		return block, err
 	}
-	rawRequestDuration.WithLabels("GetBlockByHeight", "ok").Observe(time.Since(n).Seconds())
+	rawRequestGRPCDuration.WithLabels("GetBlockByHeight", "ok").Observe(time.Since(n).Seconds())
 
 	hb := bytes.HexBytes(bbh.BlockId.Hash)
 	block = structs.Block{

@@ -20,6 +20,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	errUnknownMessageType = fmt.Errorf("unknown message type")
+)
+
 // TxLogError Error message
 type TxLogError struct {
 	Codespace string  `json:"codespace"`
@@ -36,6 +40,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 		Limit:      perPage,
 	}
 
+	numberOfItemsInBlock.Add(float64(block.NumberOfTransactions))
 	var page = uint64(1)
 	for {
 		pag.Offset = (perPage * page) - perPage
@@ -54,17 +59,20 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 
 		c.logger.Debug("[COSMOS-API] Request Time (/tx_search)", zap.Duration("duration", time.Now().Sub(now)))
 		if err != nil {
+			rawRequestGRPCDuration.WithLabels("GetTxsEvent", "error").Observe(time.Since(now).Seconds())
 			return nil, err
 		}
-		rawRequestDuration.WithLabels("/tx_search", "200").Observe(time.Since(now).Seconds())
-		numberOfItemsTransactions.Observe(float64(len(grpcRes.Txs)))
+		rawRequestGRPCDuration.WithLabels("GetTxsEvent", "ok").Observe(time.Since(now).Seconds())
+		numberOfItemsTransactions.Add(float64(len(grpcRes.Txs)))
 
 		for i, trans := range grpcRes.Txs {
 			resp := grpcRes.TxResponses[i]
+			n := time.Now()
 			tx, err := rawToTransaction(ctx, trans, resp, c.logger)
 			if err != nil {
 				return nil, err
 			}
+			conversionDuration.WithLabels(resp.Tx.TypeUrl).Observe(time.Since(n).Seconds())
 			tx.BlockHash = block.Hash
 			tx.ChainID = block.ChainID
 			tx.Time = block.Time
@@ -129,6 +137,12 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			}
 
 			if err != nil {
+				if errors.Is(err, errUnknownMessageType) {
+					unknownTransactions.WithLabels(m.TypeUrl).Inc()
+				} else {
+					brokenTransactions.WithLabels(m.TypeUrl).Inc()
+				}
+
 				logger.Error("[COSMOS-API] Problem decoding transaction ", zap.Error(err), zap.String("type", msgType), zap.String("route", m.TypeUrl), zap.Int64("height", resp.Height))
 				return trans, err
 			}
@@ -186,14 +200,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgMultiSend":
 			ev, err = mapper.BankMultisendToSub(m.Value, lg)
 		default:
-			err = fmt.Errorf("Unknown bank message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "crisis":
 		switch msgType {
 		case "MsgVerifyInvariant":
 			ev, err = mapper.CrisisVerifyInvariantToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown crisis message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "distribution":
 		switch msgType {
@@ -206,14 +220,14 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgFundCommunityPool":
 			ev, err = mapper.DistributionFundCommunityPoolToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown distribution message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "evidence":
 		switch msgType {
 		case "MsgSubmitEvidence":
 			ev, err = mapper.EvidenceSubmitEvidenceToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown evidence message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "gov":
 		switch msgType {
@@ -224,21 +238,21 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgSubmitProposal":
 			ev, err = mapper.GovSubmitProposalToSub(m.Value, lg)
 		default:
-			err = fmt.Errorf("Unknown gov message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "slashing":
 		switch msgType {
 		case "MsgUnjail":
 			ev, err = mapper.SlashingUnjailToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown slashing message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "vesting":
 		switch msgType {
 		case "MsgCreateVestingAccount":
 			ev, err = mapper.VestingMsgCreateVestingAccountToSub(m.Value, lg)
 		default:
-			err = fmt.Errorf("Unknown vesting message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "staking":
 		switch msgType {
@@ -253,10 +267,10 @@ func addSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *cod
 		case "MsgBeginRedelegate":
 			ev, err = mapper.StakingBeginRedelegateToSub(m.Value, lg)
 		default:
-			err = fmt.Errorf("Unknown staking message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	default:
-		err = fmt.Errorf("Unknown message Route %v", msgType)
+		err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 	}
 
 	if len(ev.Type) > 0 {
@@ -281,7 +295,7 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		case "MsgSubmitMisbehaviour":
 			ev, err = mapper.IBCSubmitMisbehaviourToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown ibc client message Type")
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "connection":
 		switch msgType {
@@ -294,7 +308,7 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 		case "MsgConnectionOpenTry":
 			ev, err = mapper.IBCConnectionOpenTryToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown ibc connection message Type")
+			err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "channel":
 		switch msgType {
@@ -318,22 +332,23 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 			ev, err = mapper.IBCChannelAcknowledgementToSub(m.Value)
 
 		default:
-			err = fmt.Errorf("Unknown ibc channel message Type")
+			err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	case "transfer":
 		switch msgType {
 		case "MsgTransfer":
 			ev, err = mapper.IBCTransferToSub(m.Value)
 		default:
-			err = fmt.Errorf("Unknown ibc transfer message Type")
+			err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	default:
-		err = fmt.Errorf("Unknown ibc message route: %v", msgType)
+		err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
 	}
 
 	if len(ev.Type) > 0 {
 		tev.Sub = append(tev.Sub, ev)
 		tev.Kind = ev.Type[0]
 	}
+
 	return err
 }
