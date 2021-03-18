@@ -25,7 +25,7 @@ func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAcc
 	resp.Height = params.Height
 	endpoint := fmt.Sprintf("%s/bank/balances/%v", c.cosmosLCDAddr, params.Account)
 
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return resp, err
 	}
@@ -55,7 +55,7 @@ func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAcc
 		} else if err != nil {
 			return resp, err
 		}
-		rawRequestDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
+		rawRequestHTTPDuration.WithLabels("/bank/balances/", cliResp.Status).Observe(time.Since(n).Seconds())
 
 		defer cliResp.Body.Close()
 

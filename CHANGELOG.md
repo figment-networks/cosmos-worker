@@ -1,6 +1,16 @@
 # Change Log
 
 
+## [0.1.6] - 2021-03-18
+
+### Added
+- Context bound to live calls
+
+### Changed
+- Bumped cosmos-sdk library to 0.42.1
+- Unify metrics among workers
+### Fixed
+
 ## [0.1.5] - 2021-03-08
 
 ### Added
