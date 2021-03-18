@@ -58,7 +58,7 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		} else if err != nil {
 			return resp, err
 		}
-		rawRequestHTTPDuration.WithLabels(endpoint, cliResp.Status).Observe(time.Since(n).Seconds())
+		rawRequestHTTPDuration.WithLabels("/distribution/delegators/_/rewards", cliResp.Status).Observe(time.Since(n).Seconds())
 
 		defer cliResp.Body.Close()
 
