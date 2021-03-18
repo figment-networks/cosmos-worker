@@ -62,4 +62,5 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosm
 // InitMetrics initialise metrics
 func InitMetrics() {
 	numberOfItemsTransactions = numberOfItems.WithLabels("transactions")
+	numberOfItemsInBlock = numberOfItemsBlock.WithLabels("transactions")
 }
