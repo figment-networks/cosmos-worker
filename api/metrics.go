@@ -27,10 +27,18 @@ var (
 		Tags:      []string{"endpoint", "status"},
 	})
 
-	numberOfItems = metrics.MustNewHistogramWithTags(metrics.HistogramOptions{
+	numberOfItems = metrics.MustNewCounterWithTags(metrics.Options{
 		Namespace: "indexerworker",
 		Subsystem: "api",
 		Name:      "tx_num",
+		Desc:      "Number of all transactions returned from one request",
+		Tags:      []string{"type"},
+	})
+
+	numberOfItemsBlock = metrics.MustNewCounterWithTags(metrics.Options{
+		Namespace: "indexerworker",
+		Subsystem: "api",
+		Name:      "block_tx_num",
 		Desc:      "Number of all transactions returned from one request",
 		Tags:      []string{"type"},
 	})
@@ -51,5 +59,6 @@ var (
 		Tags:      []string{"type"},
 	})
 
-	numberOfItemsTransactions *metrics.GroupObserver
+	numberOfItemsTransactions *metrics.GroupCounter
+	numberOfItemsInBlock      *metrics.GroupCounter
 )

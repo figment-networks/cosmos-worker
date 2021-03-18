@@ -28,7 +28,7 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 	resp.Height = params.Height
 	endpoint := fmt.Sprintf("%s/distribution/delegators/%v/rewards", c.cosmosLCDAddr, params.Account)
 
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return resp, err
 	}

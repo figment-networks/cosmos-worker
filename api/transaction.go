@@ -40,6 +40,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 		Limit:      perPage,
 	}
 
+	numberOfItemsInBlock.Add(float64(block.NumberOfTransactions))
 	var page = uint64(1)
 	for {
 		pag.Offset = (perPage * page) - perPage
@@ -62,7 +63,7 @@ func (c *Client) SearchTx(ctx context.Context, r structs.HeightHash, block struc
 			return nil, err
 		}
 		rawRequestGRPCDuration.WithLabels("GetTxsEvent", "ok").Observe(time.Since(now).Seconds())
-		numberOfItemsTransactions.Observe(float64(len(grpcRes.Txs)))
+		numberOfItemsTransactions.Add(float64(len(grpcRes.Txs)))
 
 		for i, trans := range grpcRes.Txs {
 			resp := grpcRes.TxResponses[i]
@@ -136,7 +137,7 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			}
 
 			if err != nil {
-				if errors.As(err, errUnknownMessageType) {
+				if errors.Is(err, errUnknownMessageType) {
 					unknownTransactions.WithLabels(m.TypeUrl).Inc()
 				} else {
 					brokenTransactions.WithLabels(m.TypeUrl).Inc()
