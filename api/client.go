@@ -6,6 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	distributionTypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
@@ -25,9 +26,10 @@ type Client struct {
 	Sbc    *SimpleBlockCache
 
 	// GRPC
-	txServiceClient tx.ServiceClient
-	tmServiceClient tmservice.ServiceClient
-	rateLimiterGRPC *rate.Limiter
+	txServiceClient    tx.ServiceClient
+	tmServiceClient    tmservice.ServiceClient
+	rateLimiterGRPC    *rate.Limiter
+	distributionClient distributionTypes.QueryClient
 
 	cfg *ClientConfig
 
@@ -44,15 +46,16 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosm
 	rateLimiterLCD := rate.NewLimiter(rate.Limit(cfg.ReqPerSecondLCD), cfg.ReqPerSecondLCD)
 
 	return &Client{
-		logger:          logger,
-		Sbc:             NewSimpleBlockCache(400),
-		tmServiceClient: tmservice.NewServiceClient(cli),
-		txServiceClient: tx.NewServiceClient(cli),
-		rateLimiterGRPC: rateLimiterGRPC,
-		cosmosLCDAddr:   cosmosLCDAddr,
-		datahubKey:      datahubKey,
-		cfg:             cfg,
-		rateLimiterLCD:  rateLimiterLCD,
+		logger:             logger,
+		Sbc:                NewSimpleBlockCache(400),
+		tmServiceClient:    tmservice.NewServiceClient(cli),
+		txServiceClient:    tx.NewServiceClient(cli),
+		distributionClient: distributionTypes.NewQueryClient(cli),
+		rateLimiterGRPC:    rateLimiterGRPC,
+		cosmosLCDAddr:      cosmosLCDAddr,
+		datahubKey:         datahubKey,
+		cfg:                cfg,
+		rateLimiterLCD:     rateLimiterLCD,
 		httpClient: &http.Client{
 			Timeout: time.Second * 40,
 		},
