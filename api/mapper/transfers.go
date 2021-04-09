@@ -16,7 +16,6 @@ import (
 func produceTransfers(se *structs.SubsetEvent, transferType, skipAddr string, lg types.ABCIMessageLog) (err error) {
 	var evts []structs.EventTransfer
 
-	m := make(map[string][]structs.TransactionAmount)
 	for _, ev := range lg.GetEvents() {
 
 		if ev.GetType() != "transfer" {
@@ -34,8 +33,8 @@ func produceTransfers(se *structs.SubsetEvent, transferType, skipAddr string, lg
 			}
 
 			if attr.Key == "amount" {
-				amounts := strings.Split(attr.Value, ",")
-				for _, amt := range amounts {
+				amts := []structs.TransactionAmount{}
+				for _, amt := range strings.Split(attr.Value, ",") {
 					attrAmt := structs.TransactionAmount{Numeric: &big.Int{}}
 
 					sliced := util.GetCurrency(amt)
@@ -58,17 +57,14 @@ func produceTransfers(se *structs.SubsetEvent, transferType, skipAddr string, lg
 					attrAmt.Exp = exp
 					attrAmt.Numeric.Set(c)
 
-					m[latestRecipient] = append(m[latestRecipient], attrAmt)
+					amts = append(amts, attrAmt)
 				}
+				evts = append(evts, structs.EventTransfer{
+					Amounts: amts,
+					Account: structs.Account{ID: latestRecipient},
+				})
 			}
 		}
-	}
-
-	for addr, amts := range m {
-		evts = append(evts, structs.EventTransfer{
-			Amounts: amts,
-			Account: structs.Account{ID: addr},
-		})
 	}
 
 	if len(evts) <= 0 {
