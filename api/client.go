@@ -1,7 +1,6 @@
 package api
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -15,7 +14,6 @@ import (
 
 type ClientConfig struct {
 	ReqPerSecond        int
-	ReqPerSecondLCD     int
 	TimeoutBlockCall    time.Duration
 	TimeoutSearchTxCall time.Duration
 }
@@ -34,18 +32,11 @@ type Client struct {
 	bankClient         bankTypes.QueryClient
 
 	cfg *ClientConfig
-
-	// LCD
-	cosmosLCDAddr  string
-	datahubKey     string
-	httpClient     *http.Client
-	rateLimiterLCD *rate.Limiter
 }
 
 // NewClient returns a new client for a given endpoint
-func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosmosLCDAddr, datahubKey string) *Client {
+func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig) *Client {
 	rateLimiterGRPC := rate.NewLimiter(rate.Limit(cfg.ReqPerSecond), cfg.ReqPerSecond)
-	rateLimiterLCD := rate.NewLimiter(rate.Limit(cfg.ReqPerSecondLCD), cfg.ReqPerSecondLCD)
 
 	return &Client{
 		logger:             logger,
@@ -55,13 +46,7 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosm
 		distributionClient: distributionTypes.NewQueryClient(cli),
 		bankClient:         bankTypes.NewQueryClient(cli),
 		rateLimiterGRPC:    rateLimiterGRPC,
-		cosmosLCDAddr:      cosmosLCDAddr,
-		datahubKey:         datahubKey,
 		cfg:                cfg,
-		rateLimiterLCD:     rateLimiterLCD,
-		httpClient: &http.Client{
-			Timeout: time.Second * 40,
-		},
 	}
 }
 

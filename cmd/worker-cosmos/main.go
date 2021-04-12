@@ -116,17 +116,11 @@ func main() {
 	}
 	defer grpcConn.Close()
 
-	if cfg.TendermintLCDAddr == "" {
-		logger.Error(fmt.Errorf("tendermint lcd address is not set"))
-		return
-	}
-
 	apiClient := api.NewClient(logger.GetLogger(), grpcConn, &api.ClientConfig{
 		ReqPerSecond:        int(cfg.RequestsPerSecond),
-		ReqPerSecondLCD:     int(cfg.RequestsPerSecondLCD),
 		TimeoutBlockCall:    cfg.TimeoutBlockCall,
 		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
-	}, cfg.TendermintLCDAddr, cfg.DataHubKey)
+	})
 
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, uint64(cfg.MaximumHeightsToGet))
