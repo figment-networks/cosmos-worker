@@ -6,6 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/types/tx"
+	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributionTypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
@@ -30,6 +31,7 @@ type Client struct {
 	tmServiceClient    tmservice.ServiceClient
 	rateLimiterGRPC    *rate.Limiter
 	distributionClient distributionTypes.QueryClient
+	bankClient         bankTypes.QueryClient
 
 	cfg *ClientConfig
 
@@ -51,6 +53,7 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig, cosm
 		tmServiceClient:    tmservice.NewServiceClient(cli),
 		txServiceClient:    tx.NewServiceClient(cli),
 		distributionClient: distributionTypes.NewQueryClient(cli),
+		bankClient:         bankTypes.NewQueryClient(cli),
 		rateLimiterGRPC:    rateLimiterGRPC,
 		cosmosLCDAddr:      cosmosLCDAddr,
 		datahubKey:         datahubKey,
