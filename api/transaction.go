@@ -24,13 +24,6 @@ var (
 	errUnknownMessageType = fmt.Errorf("unknown message type")
 )
 
-// TxLogError Error message
-type TxLogError struct {
-	Codespace string  `json:"codespace"`
-	Code      float64 `json:"code"`
-	Message   string  `json:"message"`
-}
-
 var curencyRegex = regexp.MustCompile("([0-9\\.\\,\\-\\s]+)([^0-9\\s]+)$")
 
 // SearchTx is making search api call
@@ -167,7 +160,9 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			Sub: []structs.SubsetEvent{{
 				Type:   []string{"error"},
 				Module: resp.Codespace,
-				Error:  &structs.SubsetEventError{Message: resp.Info},
+				Error: &structs.SubsetEventError{
+					Message: resp.RawLog,
+				},
 			}},
 		})
 	}
