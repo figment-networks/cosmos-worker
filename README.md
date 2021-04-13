@@ -29,13 +29,12 @@ Worker also need some basic config:
 
 ```bash
     MANAGERS=0.0.0.0:8085
-    TENDERMINT_RPC_ADDR=https://cosmoshub-3.address
-    DATAHUB_KEY=1QAZXSW23EDCvfr45TGB
-    CHAIN_ID=cosmoshub-3
+    COSMOS_GRPC_ADDR=https://cosmoshub-4.node-address
+    CHAIN_ID=cosmoshub-4
 ```
 
 Where
-    - `TENDERMINT_RPC_ADDR` is a http address to node's RPC endpoint
+    - `COSMOS_GRPC_ADDR` is a http address to a cosmos node's grpc endpoint
     - `MANAGERS` a comma-separated list of manager ip:port addresses that worker will connect to. In this case only one
 
 After running both binaries worker should successfully register itself to the manager.

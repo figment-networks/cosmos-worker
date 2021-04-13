@@ -50,7 +50,7 @@ func TestGetBlock(t *testing.T) {
 				ReqPerSecond:        30,
 				TimeoutBlockCall:    time.Second * 60,
 				TimeoutSearchTxCall: time.Second * 60,
-			}, "", "")
+			})
 			end := make(chan error, 10)
 			defer close(end)
 
@@ -116,7 +116,7 @@ func TestGetResponseConsistency(t *testing.T) {
 				ReqPerSecond:        tt.args.reqsec,
 				TimeoutBlockCall:    time.Second * 60,
 				TimeoutSearchTxCall: time.Second * 60,
-			}, "", "")
+			})
 			workerClient := client.NewIndexerClient(ctx, zl, apiClient, uint64(1000))
 
 			sr := newSendRegistry()
@@ -196,12 +196,9 @@ func (sR *sendRegistry) Summary() string {
 }
 
 func TestGetDelegatorReward(t *testing.T) {
-	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
-	dataHubKey := "" // set your api key before testing
 	tests := []struct {
 		name        string
-		lcdAddr     string
-		dataHubKey  string
+		address     string
 		args        structs.HeightAccount
 		resText     string
 		resCurrency string
@@ -210,18 +207,16 @@ func TestGetDelegatorReward(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name:       "wrong delegator address syntax",
-			lcdAddr:    lcdAddr,
-			dataHubKey: dataHubKey,
+			name:    "wrong delegator address syntax",
+			address: "localhost:9090",
 			args: structs.HeightAccount{
 				Account: "wrong delegator address",
 			},
 			wantErr: true,
 		},
 		{
-			name:       "present delegator first reward at height",
-			lcdAddr:    lcdAddr,
-			dataHubKey: dataHubKey,
+			name:    "present delegator first reward at height",
+			address: "localhost:9090",
 			// see: https://www.mintscan.io/cosmos/account/cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0
 			args: structs.HeightAccount{
 				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
@@ -238,12 +233,16 @@ func TestGetDelegatorReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			zl := zaptest.NewLogger(t)
-			capi := api.NewClient(zl, nil, &api.ClientConfig{
+
+			conn, err := grpc.Dial(tt.address, grpc.WithInsecure())
+			require.NoError(t, err)
+
+			cli := api.NewClient(zl, conn, &api.ClientConfig{
 				ReqPerSecond:        30,
 				TimeoutBlockCall:    time.Second * 60,
 				TimeoutSearchTxCall: time.Second * 60,
-			}, tt.lcdAddr, tt.dataHubKey)
-			resp, err := capi.GetReward(ctx, tt.args)
+			})
+			resp, err := cli.GetReward(ctx, tt.args)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -259,30 +258,25 @@ func TestGetDelegatorReward(t *testing.T) {
 }
 
 func TestGetAccountBalance(t *testing.T) {
-	lcdAddr := "https://cosmoshub-4--lcd--archive.datahub.figment.io"
-	dataHubKey := "" // set your api key before testing
 	tests := []struct {
 		name        string
-		lcdAddr     string
-		dataHubKey  string
+		address     string
 		args        structs.HeightAccount
 		resText     string
 		resCurrency string
 		wantErr     bool
 	}{
 		{
-			name:       "wrong account address syntax",
-			lcdAddr:    lcdAddr,
-			dataHubKey: dataHubKey,
+			name:    "wrong account address syntax",
+			address: "localhost:9090",
 			args: structs.HeightAccount{
 				Account: "wrong account address",
 			},
 			wantErr: true,
 		},
 		{
-			name:       "present account address",
-			lcdAddr:    lcdAddr,
-			dataHubKey: dataHubKey,
+			name:    "present account address",
+			address: "localhost:9090",
 			// see: https://www.mintscan.io/cosmos/account/cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0
 			args: structs.HeightAccount{
 				Account: "cosmos1nlx3qm563gcr0xnzdtynj00japy7w04pmmljt0",
@@ -298,12 +292,15 @@ func TestGetAccountBalance(t *testing.T) {
 			ctx := context.Background()
 			zl := zaptest.NewLogger(t)
 
-			capi := api.NewClient(zl, nil, &api.ClientConfig{
+			conn, err := grpc.Dial(tt.address, grpc.WithInsecure())
+			require.NoError(t, err)
+
+			cli := api.NewClient(zl, conn, &api.ClientConfig{
 				ReqPerSecond:        30,
 				TimeoutBlockCall:    time.Second * 60,
 				TimeoutSearchTxCall: time.Second * 60,
-			}, tt.lcdAddr, tt.dataHubKey)
-			resp, err := capi.GetAccountBalance(ctx, tt.args)
+			})
+			resp, err := cli.GetAccountBalance(ctx, tt.args)
 
 			if tt.wantErr {
 				require.Error(t, err)

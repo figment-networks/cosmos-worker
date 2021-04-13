@@ -27,19 +27,15 @@ type Config struct {
 	Port     string `json:"port" envconfig:"PORT" default:"3000"`
 	HTTPPort string `json:"http_port" envconfig:"HTTP_PORT" default:"8087"`
 
-	DataHubKey string `json:"datahub_key" envconfig:"DATAHUB_KEY"`
-
-	TendermintLCDAddr string `json:"tendermint_lcd_addr" envconfig:"TENDERMINT_LCD_ADDR"`
-	CosmosGRPCAddr    string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
-	ChainID           string `json:"chain_id" envconfig:"CHAIN_ID"`
+	CosmosGRPCAddr string `json:"cosmos_grpc_addr" envconfig:"COSMOS_GRPC_ADDR"`
+	ChainID        string `json:"chain_id" envconfig:"CHAIN_ID"`
 
 	Managers        string        `json:"managers" envconfig:"MANAGERS" default:"127.0.0.1:8085"`
 	ManagerInterval time.Duration `json:"manager_interval" envconfig:"MANAGER_INTERVAL" default:"10s"`
 	Hostname        string        `json:"hostname" envconfig:"HOSTNAME"`
 
-	MaximumHeightsToGet  float64 `json:"maximum_heights_to_get" envconfig:"MAXIMUM_HEIGHTS_TO_GET" default:"10000"`
-	RequestsPerSecond    int64   `json:"requests_per_second" envconfig:"REQUESTS_PER_SECOND" default:"33"`
-	RequestsPerSecondLCD int64   `json:"requests_per_second_lcd" envconfig:"REQUESTS_PER_SECOND_LCD" default:"33"`
+	MaximumHeightsToGet float64 `json:"maximum_heights_to_get" envconfig:"MAXIMUM_HEIGHTS_TO_GET" default:"10000"`
+	RequestsPerSecond   int64   `json:"requests_per_second" envconfig:"REQUESTS_PER_SECOND" default:"33"`
 
 	// Rollbar
 	RollbarAccessToken string `json:"rollbar_access_token" envconfig:"ROLLBAR_ACCESS_TOKEN"`
