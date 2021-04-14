@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.2.0] - 2021-04-14
+
+### Added
+- Add error msg from rawlog to Sub.Error
+### Changed
+- deprecated lcd, the following config variables are no longer needed: `tendermint_lcd_addr`, `requests_per_second_lcd`, `datahub_key`
+- getRewards now returns validator info, compatible with latest version of manager
+### Fixed
 
 ## [0.1.6] - 2021-03-18
 
