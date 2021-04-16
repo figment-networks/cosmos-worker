@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.2.1] - 2021-04-16
+
+### Added
+
+### Changed
+### Fixed
+- removed wrongly attributed rewards to unbondedTokensPoolAddr in `undelegate` transactions
+
 ## [0.2.0] - 2021-04-14
 
 ### Added
