@@ -91,7 +91,7 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		return resp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %s ", result.Error)
 	}
 
-	var result rewardResponse
+	result := rewardResponse{}
 	if err = decoder.Decode(&result); err != nil {
 		return resp, err
 	}
