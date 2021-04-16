@@ -24,18 +24,21 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 	resp.Height = params.Height
 	resp.Rewards = make(map[structs.Validator][]structs.TransactionAmount, 0)
 
-	delResp2, err := c.distributionClient.DelegatorValidators(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
+	valResp, err := c.distributionClient.DelegatorValidators(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
 		&types.QueryDelegatorValidatorsRequest{DelegatorAddress: params.Account})
+	if err != nil {
+		return resp, fmt.Errorf("[COSMOS-API] Error fetching validators: %w", err)
+	}
 
-	for _, val := range delResp2.Validators {
-		delResp3, err := c.distributionClient.DelegationRewards(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
+	for _, val := range valResp.Validators {
+		delResp, err := c.distributionClient.DelegationRewards(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
 			&types.QueryDelegationRewardsRequest{DelegatorAddress: params.Account, ValidatorAddress: val})
 		if err != nil {
-			return resp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %w", err)
+			return resp, fmt.Errorf("[COSMOS-API] Error fetching delegation rewards: %w", err)
 		}
 
-		valRewards := make([]structs.TransactionAmount, 0, len(delResp3.GetRewards()))
-		for _, reward := range delResp3.GetRewards() {
+		valRewards := make([]structs.TransactionAmount, 0, len(delResp.GetRewards()))
+		for _, reward := range delResp.GetRewards() {
 			valRewards = append(valRewards,
 				structs.TransactionAmount{
 					Text:     reward.Amount.String(),
