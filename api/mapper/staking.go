@@ -10,6 +10,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+const unbondedAddr = "cosmos1tygms3xhhs3yv487phx3dw4a95jn7t7lpm470r"
+
 // StakingUndelegateToSub transforms staking.MsgUndelegate sdk messages to SubsetEvent
 func StakingUndelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.SubsetEvent, err error) {
 	u := &staking.MsgUndelegate{}
@@ -32,7 +34,7 @@ func StakingUndelegateToSub(msg []byte, lg types.ABCIMessageLog) (se shared.Subs
 		},
 	}
 
-	err = produceTransfers(&se, "reward", "unbondedAddr", lg) // todo
+	err = produceTransfers(&se, "reward", unbondedAddr, lg)
 	return se, err
 }
 
