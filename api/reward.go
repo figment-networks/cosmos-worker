@@ -13,12 +13,22 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
-type responseWithHeight struct {
-	Height string                                   `json:"height"`
-	Result types.QueryDelegatorTotalRewardsResponse `json:"result"`
+// rewardResponse is terra response for querying /rewards
+type rewardResponse struct {
+	Height string       `json:"height"`
+	Result rewardResult `json:"result"`
+}
+
+type rewardResult struct {
+	Total            sdk.DecCoins      `json:"total"`
+	ValidatorRewards []validatorReward `json:"rewards"`
+}
+
+type validatorReward struct {
+	Validator string       `json:"validator_address"`
+	Rewards   sdk.DecCoins `json:"reward"`
 }
 
 const maxRetries = 3
@@ -26,6 +36,7 @@ const maxRetries = 3
 // GetReward fetches total rewards for delegator account
 func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error) {
 	resp.Height = params.Height
+	resp.Rewards = make(map[structs.Validator][]structs.TransactionAmount, 0)
 	endpoint := fmt.Sprintf("/distribution/delegators/%v/rewards", params.Account)
 
 	req, err := http.NewRequest(http.MethodGet, c.baseURL+endpoint, nil)
@@ -79,20 +90,26 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		}
 		return resp, fmt.Errorf("[COSMOS-API] Error fetching rewards: %s ", result.Error)
 	}
-	var result responseWithHeight
+
+	var result rewardResponse
 	if err = decoder.Decode(&result); err != nil {
 		return resp, err
 	}
 
-	for _, reward := range result.Result.Total {
-		resp.Rewards = append(resp.Rewards,
-			structs.TransactionAmount{
-				Text:     reward.Amount.String(),
-				Numeric:  reward.Amount.BigInt(),
-				Currency: reward.Denom,
-				Exp:      sdk.Precision,
-			},
-		)
+	for _, valReward := range result.Result.ValidatorRewards {
+		valRewards := make([]structs.TransactionAmount, 0, len(valReward.Rewards))
+
+		for _, reward := range valReward.Rewards {
+			valRewards = append(valRewards,
+				structs.TransactionAmount{
+					Text:     reward.Amount.String(),
+					Numeric:  reward.Amount.BigInt(),
+					Currency: reward.Denom,
+					Exp:      sdk.Precision,
+				},
+			)
+		}
+		resp.Rewards[structs.Validator(valReward.Validator)] = valRewards
 	}
 
 	return resp, err
