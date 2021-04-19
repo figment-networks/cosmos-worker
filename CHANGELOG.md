@@ -1,4 +1,20 @@
 # Change Log
+## [0.0.9] - 2021-04-19
+
+### Added
+
+### Changed
+### Fixed
+- `transfers` returns separate events per validator
+
+
+## [0.0.8] - 2021-04-16
+
+### Added
+
+### Changed
+- getRewards returns rewards per validator
+### Fixed
 
 ## [0.0.7] - 2021-01-28
 
