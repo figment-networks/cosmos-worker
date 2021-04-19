@@ -14,10 +14,11 @@ const (
 	TransferTypeReward = "reward"
 )
 
-func produceTransfers(se *shared.SubsetEvent, transferType string, logf types.LogFormat) (err error) {
+func produceTransfers(se *shared.SubsetEvent, transferType, skipAddr string, logf types.LogFormat) (err error) {
 	var evts []shared.EventTransfer
-	m := make(map[string][]shared.TransactionAmount)
+
 	for _, ev := range logf.Events {
+
 		if ev.Type != "transfer" {
 			continue
 		}
@@ -27,6 +28,11 @@ func produceTransfers(se *shared.SubsetEvent, transferType string, logf types.Lo
 			if len(attr.Recipient) > 0 {
 				latestRecipient = attr.Recipient[0]
 			}
+
+			if latestRecipient == skipAddr {
+				continue
+			}
+			amts := []shared.TransactionAmount{}
 
 			for _, amount := range attr.Amount {
 				attrAmt := shared.TransactionAmount{Numeric: &big.Int{}}
@@ -49,18 +55,16 @@ func produceTransfers(se *shared.SubsetEvent, transferType string, logf types.Lo
 				attrAmt.Text = amount
 				attrAmt.Exp = exp
 				attrAmt.Numeric.Set(c)
+				amts = append(amts, attrAmt)
+			}
 
-				m[latestRecipient] = append(m[latestRecipient], attrAmt)
-
+			if len(amts) > 0 {
+				evts = append(evts, shared.EventTransfer{
+					Amounts: amts,
+					Account: shared.Account{ID: latestRecipient},
+				})
 			}
 		}
-	}
-
-	for addr, amts := range m {
-		evts = append(evts, shared.EventTransfer{
-			Amounts: amts,
-			Account: shared.Account{ID: addr},
-		})
 	}
 
 	if len(evts) <= 0 {
@@ -71,6 +75,5 @@ func produceTransfers(se *shared.SubsetEvent, transferType string, logf types.Lo
 		se.Transfers = make(map[string][]shared.EventTransfer)
 	}
 	se.Transfers[transferType] = evts
-
 	return
 }

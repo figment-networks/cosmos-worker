@@ -30,7 +30,7 @@ func DistributionWithdrawValidatorCommissionToSub(msg sdk.Msg, logf types.LogFor
 		}},
 	}
 
-	err = produceTransfers(&se, TransferTypeSend, logf)
+	err = produceTransfers(&se, TransferTypeSend, "", logf)
 	return se, err
 }
 
@@ -69,7 +69,7 @@ func DistributionWithdrawDelegatorRewardToSub(msg sdk.Msg, logf types.LogFormat)
 		}},
 	}
 
-	err = produceTransfers(&se, TransferTypeReward, logf)
+	err = produceTransfers(&se, TransferTypeReward, "", logf)
 	return se, err
 }
 
@@ -89,7 +89,7 @@ func DistributionFundCommunityPoolToSub(msg sdk.Msg, logf types.LogFormat) (se s
 		},
 		Sender: []shared.EventTransfer{evt},
 	}
-	err = produceTransfers(&se, TransferTypeReward, logf)
+	err = produceTransfers(&se, TransferTypeReward, "", logf)
 	return se, err
 }
 
