@@ -11,6 +11,7 @@ import (
 
 	"github.com/figment-networks/indexer-manager/structs"
 
+	"github.com/figment-networks/indexer-manager/worker/process/ranged"
 	"github.com/figment-networks/indexer-manager/worker/store"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -51,13 +52,15 @@ type IndexerClient struct {
 	streams map[uuid.UUID]*cStructs.StreamAccess
 	sLock   sync.Mutex
 
-	storeClient store.HeightStore
+	storeClient store.HeightStoreCaller
+
+	Reqester *ranged.RangeRequester
 
 	maximumHeightsToGet uint64
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.HeightStore, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.HeightStoreCaller, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -66,13 +69,16 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeC
 	getAccountDelegationsDuration = endpointDuration.WithLabels("getAccountDelegations")
 	api.InitMetrics()
 
-	return &IndexerClient{
+	ic := &IndexerClient{
 		logger:              logger,
 		grpc:                grpc,
 		maximumHeightsToGet: maximumHeightsToGet,
 		storeClient:         storeClient,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
 	}
+
+	ic.Reqester = ranged.NewRangeRequester(ic, 20)
+	return ic
 }
 
 // CloseStream removes stream from worker/client
