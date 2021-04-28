@@ -124,7 +124,8 @@ func main() {
 		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
 	})
 
-	hStore := httpStore.NewHTTPJSONRPCHeightStore([]string{"http://0.0.0.0:8985/input/jsonrpc"}, &http.Client{})
+	storeEndpoints := strings.Split(cfg.StoreHTTPEndpoints, ",")
+	hStore := httpStore.NewHTTPJSONRPCHeightStore(storeEndpoints, &http.Client{})
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, hStore, uint64(cfg.MaximumHeightsToGet))
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())
