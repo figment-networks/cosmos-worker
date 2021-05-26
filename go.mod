@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/bearcherian/rollzap v1.0.2
 	github.com/cosmos/cosmos-sdk v0.42.4
-	github.com/figment-networks/indexer-manager v0.3.8
+	github.com/figment-networks/indexer-manager v0.3.3-0.20210519132750-e5e704781363
 	github.com/figment-networks/indexing-engine v0.2.1
 	github.com/gogo/protobuf v1.3.3
 	github.com/google/uuid v1.2.0

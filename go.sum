@@ -209,8 +209,8 @@ github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+ne
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/felixge/httpsnoop v1.0.1 h1:lvB5Jl89CsZtGIWuTcDM1E/vkVs49/Ml7JJe07l8SPQ=
 github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/figment-networks/indexer-manager v0.3.8 h1:puOXBKHAQrTc5cnTV1IddmtMPGmpulhlediw9kNgRuA=
-github.com/figment-networks/indexer-manager v0.3.8/go.mod h1:98qZshG+/SFvub//aA4coYT+2G6dY9ZVdVsOug7qtqU=
+github.com/figment-networks/indexer-manager v0.3.3-0.20210519132750-e5e704781363 h1:c3Qf0HSGYGWQ9CXsQ7WhC5eDwhGd/Z4WIQIEKL1OFEk=
+github.com/figment-networks/indexer-manager v0.3.3-0.20210519132750-e5e704781363/go.mod h1:9+ZLb/KHCpq4aYBfrZSKxpnItWwSO6BHRRB1+4YSnMI=
 github.com/figment-networks/indexing-engine v0.2.1 h1:P4i+z8jzTiqso+UAPfXQ2fQ4TZlO6rDgqZyLd4/wyc4=
 github.com/figment-networks/indexing-engine v0.2.1/go.mod h1:PxX1SoEGUoCkno1I3aDj1tynP1ySQomEkuzOZFIVHkI=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
