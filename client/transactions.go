@@ -88,8 +88,10 @@ func (ic *IndexerClient) BlockAndTx(ctx context.Context, height uint64) (blockWM
 		for _, t := range txs {
 			txsWM = append(txsWM, structs.TransactionWithMeta{Network: "cosmos", ChainID: t.ChainID, Version: "0.0.1", Transaction: t})
 		}
-		if err := hSess.StoreTransactions(ctx, txsWM); err != nil {
-			return blockWM, txsWM, err
+		if len(txsWM) > 0 {
+			if err := hSess.StoreTransactions(ctx, txsWM); err != nil {
+				return blockWM, txsWM, err
+			}
 		}
 		ic.logger.Debug("[COSMOS-CLIENT] txErr Getting txs", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", blockWM.Block.NumberOfTransactions))
 	}
