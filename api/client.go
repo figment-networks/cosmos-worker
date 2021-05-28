@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	bankTypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributionTypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	stakingTypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
@@ -28,8 +29,9 @@ type Client struct {
 	txServiceClient    tx.ServiceClient
 	tmServiceClient    tmservice.ServiceClient
 	rateLimiterGRPC    *rate.Limiter
-	distributionClient distributionTypes.QueryClient
 	bankClient         bankTypes.QueryClient
+	distributionClient distributionTypes.QueryClient
+	stakingClient      stakingTypes.QueryClient
 
 	cfg *ClientConfig
 }
@@ -43,8 +45,9 @@ func NewClient(logger *zap.Logger, cli *grpc.ClientConn, cfg *ClientConfig) *Cli
 		Sbc:                NewSimpleBlockCache(400),
 		tmServiceClient:    tmservice.NewServiceClient(cli),
 		txServiceClient:    tx.NewServiceClient(cli),
-		distributionClient: distributionTypes.NewQueryClient(cli),
 		bankClient:         bankTypes.NewQueryClient(cli),
+		distributionClient: distributionTypes.NewQueryClient(cli),
+		stakingClient:      stakingTypes.NewQueryClient(cli),
 		rateLimiterGRPC:    rateLimiterGRPC,
 		cfg:                cfg,
 	}
