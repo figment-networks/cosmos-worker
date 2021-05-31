@@ -121,6 +121,8 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 				ic.GetReward(tctx, taskRequest, stream, ic.grpc)
 			case structs.ReqIDAccountBalance:
 				ic.GetAccountBalance(tctx, taskRequest, stream, ic.grpc)
+			case structs.ReqIDAccountDelegations:
+				ic.GetAccountDelegations(tctx, taskRequest, stream, ic.grpc)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
