@@ -60,6 +60,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, maximu
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
 	getRewardDuration = endpointDuration.WithLabels("getReward")
 	getAccountBalanceDuration = endpointDuration.WithLabels("getAccountBalance")
+	getAccountDelegationsDuration = endpointDuration.WithLabels("getAccountDelegations")
 	api.InitMetrics()
 
 	return &IndexerClient{
