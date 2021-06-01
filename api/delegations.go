@@ -27,7 +27,7 @@ func (c *Client) GetAccountDelegations(ctx context.Context, params structs.Heigh
 		resp.Delegations = append(resp.Delegations,
 			structs.Delegation{
 				Delegator: dr.Delegation.DelegatorAddress,
-				Validator: dr.Delegation.ValidatorAddress,
+				Validator: structs.Validator(dr.Delegation.ValidatorAddress),
 				Shares: structs.TransactionAmount{
 					Numeric: dr.Delegation.Shares.BigInt(),
 					Exp:     sdk.Precision,
