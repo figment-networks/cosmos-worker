@@ -8,9 +8,8 @@ global:
     COSMOS_GRPC_ADDR: 144.217.252.148:9090,
     CHAIN_ID: cosmoshub-4,
     HOSTNAME:
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
+      fieldRef:
+        fieldPath: status.podIP
     PORT: 3000,
     MANAGERS: indexer-manager.indexers.svc.cluster.local:8085,
     REQUESTS_PER_SECOND: 200,
