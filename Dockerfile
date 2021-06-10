@@ -1,9 +1,9 @@
 # ------------------------------------------------------------------------------
 # Builder Image
 # ------------------------------------------------------------------------------
-FROM golang:1.15 AS build
+FROM golang AS build
 
-WORKDIR /go/src/github.com/figment-networks/cosmos-worker/
+WORKDIR /build
 
 COPY ./go.mod .
 COPY ./go.sum .
@@ -21,17 +21,21 @@ ENV CGO_ENABLED=0
 ENV GOARCH=amd64
 ENV GOOS=linux
 
-RUN \
-  GO_VERSION=$(go version | awk {'print $3'}) \
-  GIT_COMMIT=$(git rev-parse HEAD) \
-  make build
+RUN make build
 
 # ------------------------------------------------------------------------------
 # Target Image
 # ------------------------------------------------------------------------------
-FROM alpine:3.10 AS release
+FROM alpine AS release
 
-WORKDIR /app/cosmos
-COPY --from=build /go/src/github.com/figment-networks/cosmos-worker/cosmos-worker /app/cosmos/worker
-RUN chmod a+x ./worker
-CMD ["./worker"]
+WORKDIR /app
+COPY --from=build /build/worker /app/worker
+
+RUN addgroup --gid 1234 figment
+RUN adduser --system --uid 1234 figment
+
+RUN chown -R figment:figment /app/worker
+
+USER 1234
+
+CMD ["/app/worker"]

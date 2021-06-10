@@ -1,0 +1,9 @@
+apiVersion: v2
+name: cosmos-worker-cosmoshub-4
+description: Cosmoshub-4 worker service
+type: application
+version: 0.0.1
+dependencies:
+  - name: common
+    repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+    version: "0.1.0"
