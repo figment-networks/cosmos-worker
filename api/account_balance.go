@@ -12,7 +12,7 @@ import (
 	"github.com/figment-networks/indexer-manager/structs"
 )
 
-// GetAccountBalance fetches account balance
+// GetAccountBalance fetches available account balance
 func (c *Client) GetAccountBalance(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountBalanceResponse, err error) {
 	resp.Height = params.Height
 
