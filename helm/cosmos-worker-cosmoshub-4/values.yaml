@@ -5,15 +5,15 @@ global:
   annotations:
     figment.io/github_repository: github.com/figment-networks/cosmos-worker
   env:
-    COSMOS_GRPC_ADDR: 144.217.252.148:9090,
-    CHAIN_ID: cosmoshub-4,
+    COSMOS_GRPC_ADDR: 144.217.252.148:9090
+    CHAIN_ID: cosmoshub-4
     HOSTNAME:
       fieldRef:
         fieldPath: status.podIP
-    PORT: 3000,
-    MANAGERS: indexer-manager.indexers.svc.cluster.local:8085,
-    REQUESTS_PER_SECOND: 200,
-    TIMEOUT_TRANSACTION_CALL: 30s,
+    PORT: 3000
+    MANAGERS: indexer-manager.indexers.svc.cluster.local:8085
+    REQUESTS_PER_SECOND: 200
+    TIMEOUT_TRANSACTION_CALL: 30s
     TIMEOUT_BLOCK_CALL: 30s,
     STORE_HTTP_ENDPOINTS: indexer-search.indexers.svc.cluster.local:8986/input/jsonrpc
     HEALTH_CHECK_INTERVAL: "10s"
