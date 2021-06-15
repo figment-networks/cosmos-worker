@@ -15,7 +15,7 @@ global:
     REQUESTS_PER_SECOND: 200
     TIMEOUT_TRANSACTION_CALL: 30s
     TIMEOUT_BLOCK_CALL: 30s
-    STORE_HTTP_ENDPOINTS: indexer-search.indexers.svc.cluster.local:8986/input/jsonrpc
+    STORE_HTTP_ENDPOINTS: http://indexer-search.indexers.svc.cluster.local:8986/input/jsonrpc
     HEALTH_CHECK_INTERVAL: 10s
     ROLLBAR_ENV: production
     ROLLBAR_SERVER_ROOT: github.com/figment-networks/cosmos-worker
