@@ -7,17 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/figment-networks/cosmos-worker/api"
+	mStructs "github.com/figment-networks/indexer-manager/structs"
+	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 	"github.com/figment-networks/indexing-engine/metrics"
+	"github.com/figment-networks/indexing-engine/structs"
+	"github.com/figment-networks/indexing-engine/worker/process/ranged"
+	"github.com/figment-networks/indexing-engine/worker/store"
 
-	"github.com/figment-networks/indexer-manager/structs"
-
-	"github.com/figment-networks/indexer-manager/worker/process/ranged"
-	"github.com/figment-networks/indexer-manager/worker/store"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-
-	"github.com/figment-networks/cosmos-worker/api"
-	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 )
 
 const page = 100
@@ -52,7 +51,7 @@ type IndexerClient struct {
 	streams map[uuid.UUID]*cStructs.StreamAccess
 	sLock   sync.Mutex
 
-	storeClient store.HeightStoreCaller
+	storeClient store.SearchStoreCaller
 
 	Reqester *ranged.RangeRequester
 
@@ -60,7 +59,7 @@ type IndexerClient struct {
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.HeightStoreCaller, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.SearchStoreCaller, maximumHeightsToGet uint64) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -124,15 +123,15 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 			receivedRequestsMetric.WithLabels(taskRequest.Type).Inc()
 			tctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 			switch taskRequest.Type {
-			case structs.ReqIDGetTransactions:
+			case mStructs.ReqIDGetTransactions:
 				ic.GetTransactions(tctx, taskRequest, stream, ic.grpc)
-			case structs.ReqIDGetReward:
+			case mStructs.ReqIDGetReward:
 				ic.GetReward(tctx, taskRequest, stream, ic.grpc)
-			case structs.ReqIDAccountBalance:
+			case mStructs.ReqIDAccountBalance:
 				ic.GetAccountBalance(tctx, taskRequest, stream, ic.grpc)
-			case structs.ReqIDAccountDelegations:
+			case mStructs.ReqIDAccountDelegations:
 				ic.GetAccountDelegations(tctx, taskRequest, stream, ic.grpc)
-			case structs.ReqIDGetLatestMark:
+			case mStructs.ReqIDGetLatestMark:
 				ic.GetLatestMark(tctx, taskRequest, stream, ic.grpc)
 			default:
 				stream.Send(cStructs.TaskResponse{

@@ -8,7 +8,7 @@ import (
 	// "github.com/figment-networks/cosmos-worker/api/types"
 	// "github.com/figment-networks/cosmos-worker/api/util"
 	"github.com/figment-networks/cosmos-worker/api/util"
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 
 	"github.com/cosmos/cosmos-sdk/types"
 )

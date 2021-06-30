@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -22,7 +22,7 @@ const maxRetries = 3
 // GetReward fetches total rewards for delegator account
 func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error) {
 	resp.Height = params.Height
-	resp.Rewards = make(map[structs.Validator][]structs.TransactionAmount, 0)
+	resp.Rewards = make(map[structs.Validator][]structs.RewardAmount, 0)
 
 	valResp, err := c.distributionClient.DelegatorValidators(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
 		&types.QueryDelegatorValidatorsRequest{DelegatorAddress: params.Account})
@@ -37,10 +37,10 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 			return resp, fmt.Errorf("[COSMOS-API] Error fetching delegation rewards: %w", err)
 		}
 
-		valRewards := make([]structs.TransactionAmount, 0, len(delResp.GetRewards()))
+		valRewards := make([]structs.RewardAmount, 0, len(delResp.GetRewards()))
 		for _, reward := range delResp.GetRewards() {
 			valRewards = append(valRewards,
-				structs.TransactionAmount{
+				structs.RewardAmount{
 					Text:     reward.Amount.String(),
 					Numeric:  reward.Amount.BigInt(),
 					Currency: reward.Denom,

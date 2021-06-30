@@ -3,7 +3,7 @@ package mapper
 import (
 	"fmt"
 
-	shared "github.com/figment-networks/indexer-manager/structs"
+	shared "github.com/figment-networks/indexing-engine/structs"
 
 	channel "github.com/cosmos/cosmos-sdk/x/ibc/core/04-channel/types"
 	"github.com/gogo/protobuf/proto"

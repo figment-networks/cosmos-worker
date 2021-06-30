@@ -3,7 +3,7 @@ package mapper
 import (
 	"fmt"
 
-	shared "github.com/figment-networks/indexer-manager/structs"
+	shared "github.com/figment-networks/indexing-engine/structs"
 
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/gogo/protobuf/proto"

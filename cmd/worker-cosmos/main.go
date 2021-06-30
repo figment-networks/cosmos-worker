@@ -20,12 +20,10 @@ import (
 	"github.com/figment-networks/indexer-manager/worker/connectivity"
 	grpcIndexer "github.com/figment-networks/indexer-manager/worker/transport/grpc"
 	grpcProtoIndexer "github.com/figment-networks/indexer-manager/worker/transport/grpc/indexer"
-
-	httpStore "github.com/figment-networks/indexer-manager/worker/store/transport/http"
-
 	"github.com/figment-networks/indexing-engine/health"
 	"github.com/figment-networks/indexing-engine/metrics"
 	"github.com/figment-networks/indexing-engine/metrics/prometheusmetrics"
+	httpStore "github.com/figment-networks/indexing-engine/worker/store/transport/http"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -125,7 +123,7 @@ func main() {
 	})
 
 	storeEndpoints := strings.Split(cfg.StoreHTTPEndpoints, ",")
-	hStore := httpStore.NewHTTPJSONRPCHeightStore(storeEndpoints, &http.Client{})
+	hStore := httpStore.NewHTTPStore(storeEndpoints, &http.Client{})
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, hStore, uint64(cfg.MaximumHeightsToGet))
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())
