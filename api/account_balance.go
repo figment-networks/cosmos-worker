@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 )
 
 // GetAccountBalance fetches account balance

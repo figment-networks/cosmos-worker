@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/figment-networks/indexer-manager/structs"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 	"github.com/figment-networks/indexing-engine/metrics"
+	"github.com/figment-networks/indexing-engine/structs"
 	"go.uber.org/zap"
 )
 
@@ -65,18 +65,19 @@ func (ic *IndexerClient) BlockAndTx(ctx context.Context, height uint64) (blockWM
 	defer ic.logger.Sync()
 	ic.logger.Debug("[COSMOS-CLIENT] Getting height", zap.Uint64("block", height))
 
-	hSess, err := ic.storeClient.GetSession(ctx)
+	hSess, err := ic.storeClient.GetSearchSession(ctx)
 	if err != nil {
 		return blockWM, nil, err
 	}
 
 	blockWM = structs.BlockWithMeta{Network: "cosmos", Version: "0.0.1"}
 	blockWM.Block, err = ic.grpc.GetBlock(ctx, structs.HeightHash{Height: uint64(height)})
-	blockWM.ChainID = blockWM.Block.ChainID
 	if err != nil {
 		ic.logger.Error("[COSMOS-CLIENT] Err Getting block", zap.Uint64("block", height), zap.Error(err), zap.Uint64("txs", blockWM.Block.NumberOfTransactions))
 		return blockWM, nil, fmt.Errorf("error fetching block: %d %w ", uint64(height), err)
 	}
+	blockWM.ChainID = blockWM.Block.ChainID
+
 	if err := hSess.StoreBlocks(ctx, []structs.BlockWithMeta{blockWM}); err != nil {
 		return blockWM, nil, err
 	}

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/figment-networks/indexer-manager/structs"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
 	"github.com/figment-networks/indexing-engine/metrics"
+	"github.com/figment-networks/indexing-engine/structs"
 	"go.uber.org/zap"
 )
 

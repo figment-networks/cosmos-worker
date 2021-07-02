@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/figment-networks/cosmos-worker/api/mapper"
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 
 	codec_types "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types"

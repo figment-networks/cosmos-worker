@@ -41,6 +41,25 @@ After running both binaries worker should successfully register itself to the ma
 
 If you wanna connect with manager running on docker instance add `HOSTNAME=host.docker.internal` (this is for OSX and Windows). For linux add your docker gateway address taken from ifconfig (it probably be the one from interface called docker0).
 
+## Developing Locally
+
+First, you will need to set up a few dependencies:
+
+1. [Install Go](https://golang.org/doc/install)
+2. A Kava network node with both RPC and LCD APIs (in this example, we assume it's running at http://localhost)
+3. A running [indexer-manager](https://github.com/figment-networks/indexer-manager) instance
+4. A running datastore API instance (configured with `STORE_HTTP_ENDPOINTS`).
+
+Then, run the worker with some environment config:
+
+```
+CHAIN_ID=cosmoshub-4 \
+STORE_HTTP_ENDPOINTS=http://127.0.0.1:8986/input/jsonrpc \
+COSMOS_GRPC_ADDR=0.0.0.0:9090 \
+TENDERMINT_LCD_ADDR=http://127.0.0.1:1317 \
+go run ./cmd/worker-cosmos
+```
+
 ## Transaction Types
 List of currently supported transaction types in cosmos-worker are (listed by modules):
 - bank:

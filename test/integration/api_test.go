@@ -10,8 +10,8 @@ import (
 
 	"github.com/figment-networks/cosmos-worker/api"
 	"github.com/figment-networks/cosmos-worker/client"
-	"github.com/figment-networks/indexer-manager/structs"
 	cStructs "github.com/figment-networks/indexer-manager/worker/connectivity/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
