@@ -13,7 +13,7 @@ import (
 
 // see types https://github.com/Gravity-Devs/liquidity/blob/44220af8ebd5b664768b4098a2159b75ca02df8a/x/liquidity/spec/04_messages.md
 
-// IBCCreateClientToSub transforms ibc.MsgCreatePool sdk messages to SubsetEvent
+// TendermintCreatePool transforms liquidity.MsgCreatePool sdk messages to SubsetEvent
 func TendermintCreatePool(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgCreatePool{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -43,7 +43,7 @@ func TendermintCreatePool(msg []byte) (se shared.SubsetEvent, err error) {
 	return se, nil
 }
 
-// IBCUpdateClientToSub transforms ibc.MsgDepositWithinBatch sdk messages to SubsetEvent
+// TendermintDepositWithinBatch transforms liquidity.MsgDepositWithinBatch sdk messages to SubsetEvent
 func TendermintDepositWithinBatch(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgDepositWithinBatch{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -72,7 +72,7 @@ func TendermintDepositWithinBatch(msg []byte) (se shared.SubsetEvent, err error)
 	return se, nil
 }
 
-// IBCUpgradeClientToSub transforms ibc.MsgWithdrawWithinBatch sdk messages to SubsetEvent
+// TendermintWithdrawWithinBatch transforms liquidity.MsgWithdrawWithinBatch sdk messages to SubsetEvent
 func TendermintWithdrawWithinBatch(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgWithdrawWithinBatch{}
 	if err := proto.Unmarshal(msg, m); err != nil {
@@ -98,7 +98,7 @@ func TendermintWithdrawWithinBatch(msg []byte) (se shared.SubsetEvent, err error
 	}, nil
 }
 
-// IBCSubmitMisbehaviourToSub transforms ibc.MsgSwapWithinBatch sdk messages to SubsetEvent
+// TendermintSwapWithinBatch transforms liquidity.MsgSwapWithinBatch sdk messages to SubsetEvent
 func TendermintSwapWithinBatch(msg []byte) (se shared.SubsetEvent, err error) {
 	m := &client.MsgSwapWithinBatch{}
 	if err := proto.Unmarshal(msg, m); err != nil {
