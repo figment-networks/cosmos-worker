@@ -114,7 +114,9 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			}
 			lg := findLog(resp.Logs, index)
 
-			// tPath is "/cosmos.bank.v1beta1.MsgSend" or "/ibc.core.client.v1.MsgCreateClient"
+			// tPath is "/cosmos.bank.v1beta1.MsgSend" or
+			// "/ibc.core.client.v1.MsgCreateClient" or
+			// "/tendermint.liquidity.v1beta1.MsgSwapWithinBatch"
 			tPath := strings.Split(m.TypeUrl, ".")
 
 			var err error
@@ -125,6 +127,9 @@ func rawToTransaction(ctx context.Context, in *tx.Tx, resp *types.TxResponse, lo
 			} else if len(tPath) == 4 && tPath[0] == "/cosmos" {
 				msgType = tPath[3]
 				err = addSubEvent(tPath[1], msgType, &tev, m, lg)
+			} else if len(tPath) == 4 && tPath[0] == "/tendermint" {
+				msgType = tPath[3]
+				err = addTendermintSubEvent(tPath[1], msgType, &tev, m, lg)
 			} else {
 				err = fmt.Errorf("TypeURL is in wrong format: %v", m.TypeUrl)
 			}
@@ -335,6 +340,35 @@ func addIBCSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *
 			ev, err = mapper.IBCTransferToSub(m.Value)
 		default:
 			err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
+		}
+	default:
+		err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
+	}
+
+	if len(ev.Type) > 0 {
+		tev.Sub = append(tev.Sub, ev)
+		tev.Kind = ev.Type[0]
+	}
+
+	return err
+}
+
+func addTendermintSubEvent(msgRoute, msgType string, tev *structs.TransactionEvent, m *codec_types.Any, lg types.ABCIMessageLog) (err error) {
+	var ev structs.SubsetEvent
+
+	switch msgRoute {
+	case "liquidity":
+		switch msgType {
+		case "MsgCreatePool":
+			ev, err = mapper.TendermintCreatePool(m.Value)
+		case "MsgDepositWithinBatch":
+			ev, err = mapper.TendermintDepositWithinBatch(m.Value)
+		case "MsgWithdrawWithinBatch":
+			ev, err = mapper.TendermintWithdrawWithinBatch(m.Value)
+		case "MsgSwapWithinBatch":
+			ev, err = mapper.TendermintSwapWithinBatch(m.Value)
+		default:
+			err = fmt.Errorf("problem with %s - %s: %w", msgRoute, msgType, errUnknownMessageType)
 		}
 	default:
 		err = fmt.Errorf("problem with %s - %s:  %w", msgRoute, msgType, errUnknownMessageType)
