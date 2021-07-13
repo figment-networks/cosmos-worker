@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/bearcherian/rollzap v1.0.2
 	github.com/cosmos/cosmos-sdk v0.42.6
-	github.com/davecgh/go-spew v1.1.1
 	github.com/figment-networks/indexer-manager v0.3.8
 	github.com/figment-networks/indexing-engine v0.2.1
 	github.com/gogo/protobuf v1.3.3
