@@ -56,6 +56,9 @@ func TendermintDepositWithinBatch(msg []byte) (se shared.SubsetEvent, err error)
 		Node: map[string][]shared.Account{
 			"depositor_address": {{ID: m.DepositorAddress}},
 		},
+		Sender: []shared.EventTransfer{
+			{Account: shared.Account{ID: m.DepositorAddress}},
+		},
 		Additional: map[string][]string{
 			"pool_id": {strconv.FormatUint(m.PoolId, 10)},
 		},
@@ -91,6 +94,9 @@ func TendermintWithdrawWithinBatch(msg []byte) (se shared.SubsetEvent, err error
 				Numeric:  m.PoolCoin.Amount.BigInt(),
 				Text:     m.PoolCoin.String(),
 			},
+		},
+		Recipient: []shared.EventTransfer{
+			{Account: shared.Account{ID: m.WithdrawerAddress}},
 		},
 		Additional: map[string][]string{
 			"pool_id": {strconv.FormatUint(m.PoolId, 10)},
