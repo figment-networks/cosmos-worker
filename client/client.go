@@ -36,6 +36,7 @@ type GRPC interface {
 	GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error)
 	GetAccountBalance(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountBalanceResponse, err error)
 	GetAccountDelegations(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountDelegationsResponse, err error)
+	GetAccountUnbondingDelegations(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountUnbondingResponse, err error)
 }
 
 type OutputSender interface {
@@ -61,6 +62,8 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, maximu
 	getRewardDuration = endpointDuration.WithLabels("getReward")
 	getAccountBalanceDuration = endpointDuration.WithLabels("getAccountBalance")
 	getAccountDelegationsDuration = endpointDuration.WithLabels("getAccountDelegations")
+	getAccountDebondingDelegationsDuration = endpointDuration.WithLabels("getAccountDebondingDelegations")
+
 	api.InitMetrics()
 
 	return &IndexerClient{
@@ -124,6 +127,8 @@ func (ic *IndexerClient) Run(ctx context.Context, stream *cStructs.StreamAccess)
 				ic.GetAccountBalance(tctx, taskRequest, stream, ic.grpc)
 			case structs.ReqIDAccountDelegations:
 				ic.GetAccountDelegations(tctx, taskRequest, stream, ic.grpc)
+			case structs.ReqIDAccountDebondingDelegations:
+				ic.GetAccountDebondingDelegations(tctx, taskRequest, stream, ic.grpc)
 			default:
 				stream.Send(cStructs.TaskResponse{
 					Id:    taskRequest.Id,
@@ -294,10 +299,10 @@ func (ic *IndexerClient) GetAccountDelegations(ctx context.Context, tr cStructs.
 
 	blnc, err := client.GetAccountDelegations(sCtx, *ha)
 	if err != nil {
-		ic.logger.Error("Error getting account balance", zap.Error(err))
+		ic.logger.Error("Error getting account delegations", zap.Error(err))
 		stream.Send(cStructs.TaskResponse{
 			Id:    tr.Id,
-			Error: cStructs.TaskError{Msg: "Error getting account balance data " + err.Error()},
+			Error: cStructs.TaskError{Msg: "Error getting account delegations data " + err.Error()},
 			Final: true,
 		})
 		return
@@ -307,6 +312,47 @@ func (ic *IndexerClient) GetAccountDelegations(ctx context.Context, tr cStructs.
 	out <- cStructs.OutResp{
 		ID:      tr.Id,
 		Type:    "AccountDelegations",
+		Payload: blnc,
+	}
+	close(out)
+
+	sendResp(ctx, tr.Id, out, ic.logger, stream, nil)
+}
+
+// GetAccountDebondingDelegations gets account debonding delegations
+func (ic *IndexerClient) GetAccountDebondingDelegations(ctx context.Context, tr cStructs.TaskRequest, stream *cStructs.StreamAccess, client GRPC) {
+	timer := metrics.NewTimer(getAccountDebondingDelegationsDuration)
+	defer timer.ObserveDuration()
+
+	ha := &structs.HeightAccount{}
+	err := json.Unmarshal(tr.Payload, ha)
+	if err != nil {
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Cannot unmarshal payload"},
+			Final: true,
+		})
+		return
+	}
+
+	sCtx, cancel := context.WithTimeout(ctx, time.Second*20)
+	defer cancel()
+
+	blnc, err := client.GetAccountDebondingDelegations(sCtx, *ha)
+	if err != nil {
+		ic.logger.Error("Error getting account debonding", zap.Error(err))
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Error getting account debonding data " + err.Error()},
+			Final: true,
+		})
+		return
+	}
+
+	out := make(chan cStructs.OutResp, 1)
+	out <- cStructs.OutResp{
+		ID:      tr.Id,
+		Type:    "AccountDebondingDelegations",
 		Payload: blnc,
 	}
 	close(out)

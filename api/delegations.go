@@ -13,6 +13,8 @@ import (
 	"github.com/figment-networks/indexer-manager/structs"
 )
 
+var unbondingDenom = "uatom"
+
 // GetAccountDelegations fetches account delegations
 func (c *Client) GetAccountDelegations(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountDelegationsResponse, err error) {
 	resp.Height = params.Height
@@ -39,6 +41,38 @@ func (c *Client) GetAccountDelegations(ctx context.Context, params structs.Heigh
 				},
 			},
 		)
+	}
+
+	return resp, err
+}
+
+// GetAccountUnbondingDelegations fetches account delegations
+func (c *Client) GetAccountUnbondingDelegations(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountUnbondingResponse, err error) {
+	resp.Height = params.Height
+
+	delResp, err := c.stakingClient.DelegatorUnbondingDelegations(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
+		&types.QueryDelegatorUnbondingDelegationsRequest{DelegatorAddr: params.Account})
+	if err != nil {
+		return resp, fmt.Errorf("[COSMOS-API] Error fetching unbonding delegations: %w", err)
+	}
+
+	for _, dr := range delResp.UnbondingResponses {
+		for _, entry := range dr.Entries {
+			resp.UnbondingDelegations = append(resp.UnbondingDelegations, structs.UnbondingDelegation{
+				Delegator:      dr.DelegatorAddress,
+				Validator:      structs.Validator(dr.ValidatorAddress),
+				CreationHeight: entry.CreationHeight,
+				CompletionTime: entry.CompletionTime,
+				InitialBalance: structs.TransactionAmount{
+					Currency: unbondingDenom,
+					Numeric:  entry.InitialBalance.BigInt(),
+				},
+				Balance: structs.TransactionAmount{
+					Currency: unbondingDenom,
+					Numeric:  entry.Balance.BigInt(),
+				},
+			})
+		}
 	}
 
 	return resp, err
