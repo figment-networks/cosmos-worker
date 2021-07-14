@@ -1,7 +1,10 @@
 # Change Log
 
-
 ## dev
+### Added
+### Changed
+### Fixed
+## [0.2.3] - 2021-07-14
 
 ### Added
 - Added parsing for missing tendermint liquidity transaction types:     "create_pool" , "deposit_within_batch", "withdraw_within_batch", "swap_within_batch"
