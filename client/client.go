@@ -280,6 +280,7 @@ func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest,
 	timer := metrics.NewTimer(getRewardDuration)
 	defer timer.ObserveDuration()
 
+	// parse payload
 	ha := &structs.HeightAccount{}
 	err := json.Unmarshal(tr.Payload, ha)
 	if err != nil {

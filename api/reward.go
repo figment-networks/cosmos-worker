@@ -27,8 +27,15 @@ func (c *Client) GetReward(
 ) (resp structs.GetUnclaimedRewardResponse, err error) {
 	resp.Height = params.Height
 
-	valResp, err := c.distributionClient.DelegatorValidators(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
-		&types.QueryDelegatorValidatorsRequest{DelegatorAddress: params.Account})
+	// get validators that delegator delegated to
+	valResp, err := c.distributionClient.DelegatorValidators(
+		metadata.AppendToOutgoingContext(
+			ctx,
+			grpctypes.GRPCBlockHeightHeader,
+			strconv.FormatUint(params.Height, 10),
+		),
+		&types.QueryDelegatorValidatorsRequest{DelegatorAddress: params.Account},
+	)
 	if err != nil {
 		return resp, fmt.Errorf("[COSMOS-API] Error fetching validators: %w", err)
 	}
@@ -37,8 +44,18 @@ func (c *Client) GetReward(
 
 	// get rewards delegator earned from each of its validators
 	for _, val := range valResp.Validators {
-		delResp, err := c.distributionClient.DelegationRewards(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
-			&types.QueryDelegationRewardsRequest{DelegatorAddress: params.Account, ValidatorAddress: val})
+		// get validator rewards for this delegator from cosmos node
+		delResp, err := c.distributionClient.DelegationRewards(
+			metadata.AppendToOutgoingContext(
+				ctx,
+				grpctypes.GRPCBlockHeightHeader,
+				strconv.FormatUint(params.Height, 10),
+			),
+			&types.QueryDelegationRewardsRequest{
+				DelegatorAddress: params.Account,
+				ValidatorAddress: val,
+			},
+		)
 		if err != nil {
 			return resp, fmt.Errorf("[COSMOS-API] Error fetching delegation rewards: %w", err)
 		}
