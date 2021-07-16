@@ -56,10 +56,19 @@ type IndexerClient struct {
 	Reqester *ranged.RangeRequester
 
 	maximumHeightsToGet uint64
+
+	chainID string
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.SearchStoreCaller, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(
+	ctx context.Context,
+	logger *zap.Logger,
+	grpc GRPC,
+	storeClient store.StoreCaller,
+	maximumHeightsToGet uint64,
+	chainID string,
+) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -74,6 +83,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeC
 		maximumHeightsToGet: maximumHeightsToGet,
 		storeClient:         storeClient,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
+		chainID:             chainID,
 	}
 
 	ic.Reqester = ranged.NewRangeRequester(ic, 20)
