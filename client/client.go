@@ -34,7 +34,7 @@ var (
 type GRPC interface {
 	GetBlock(ctx context.Context, params structs.HeightHash) (block structs.Block, er error)
 	SearchTx(ctx context.Context, r structs.HeightHash, block structs.Block, perPage uint64) (txs []structs.Transaction, err error)
-	GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error)
+	GetReward(ctx context.Context, params structs.HeightAccount, chainID string) (resp structs.GetUnclaimedRewardResponse, err error)
 	GetAccountBalance(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountBalanceResponse, err error)
 	GetAccountDelegations(ctx context.Context, params structs.HeightAccount) (resp structs.GetAccountDelegationsResponse, err error)
 }
@@ -51,15 +51,24 @@ type IndexerClient struct {
 	streams map[uuid.UUID]*cStructs.StreamAccess
 	sLock   sync.Mutex
 
-	storeClient store.SearchStoreCaller
+	storeClient store.StoreCaller
 
 	Reqester *ranged.RangeRequester
 
 	maximumHeightsToGet uint64
+
+	chainID string
 }
 
 // NewIndexerClient is IndexerClient constructor
-func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeClient store.SearchStoreCaller, maximumHeightsToGet uint64) *IndexerClient {
+func NewIndexerClient(
+	ctx context.Context,
+	logger *zap.Logger,
+	grpc GRPC,
+	storeClient store.StoreCaller,
+	maximumHeightsToGet uint64,
+	chainID string,
+) *IndexerClient {
 	getTransactionDuration = endpointDuration.WithLabels("getTransactions")
 	getLatestDuration = endpointDuration.WithLabels("getLatest")
 	getBlockDuration = endpointDuration.WithLabels("getBlock")
@@ -74,6 +83,7 @@ func NewIndexerClient(ctx context.Context, logger *zap.Logger, grpc GRPC, storeC
 		maximumHeightsToGet: maximumHeightsToGet,
 		storeClient:         storeClient,
 		streams:             make(map[uuid.UUID]*cStructs.StreamAccess),
+		chainID:             chainID,
 	}
 
 	ic.Reqester = ranged.NewRangeRequester(ic, 20)
@@ -270,6 +280,7 @@ func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest,
 	timer := metrics.NewTimer(getRewardDuration)
 	defer timer.ObserveDuration()
 
+	// parse payload
 	ha := &structs.HeightAccount{}
 	err := json.Unmarshal(tr.Payload, ha)
 	if err != nil {
@@ -284,7 +295,8 @@ func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest,
 	sCtx, cancel := context.WithTimeout(ctx, time.Second*20)
 	defer cancel()
 
-	reward, err := client.GetReward(sCtx, *ha)
+	// fetch rewards
+	reward, err := client.GetReward(sCtx, *ha, ic.chainID)
 	if err != nil {
 		ic.logger.Error("Error getting reward", zap.Error(err))
 		stream.Send(cStructs.TaskResponse{
@@ -295,15 +307,38 @@ func (ic *IndexerClient) GetReward(ctx context.Context, tr cStructs.TaskRequest,
 		return
 	}
 
-	out := make(chan cStructs.OutResp, 1)
-	out <- cStructs.OutResp{
-		ID:      tr.Id,
-		Type:    "Reward",
-		Payload: reward,
+	// send them to rewards store
+	hSess, err := ic.storeClient.GetRewardsSession(sCtx)
+	if err != nil {
+		ic.logger.Error("Error getting rewards store session", zap.Error(err))
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Error getting rewards store session: " + err.Error()},
+			Final: true,
+		})
 	}
-	close(out)
 
-	sendResp(ctx, tr.Id, out, ic.logger, stream, nil)
+	if err = hSess.StoreUnclaimedRewards(sCtx, reward.UnclaimedRewards); err != nil {
+		ic.logger.Error("Error sending reward data to rewards store", zap.Error(err))
+		stream.Send(cStructs.TaskResponse{
+			Id:    tr.Id,
+			Error: cStructs.TaskError{Msg: "Error sending reward data to rewards store: " + err.Error()},
+			Final: true,
+		})
+	}
+
+	// notify manager that operation was successful
+	resp := cStructs.TaskResponse{
+		Id:    tr.Id,
+		Type:  "Rewards",
+		Final: true,
+	}
+
+	if err := stream.Send(resp); err != nil {
+		ic.logger.Error("Error sending message (Get Rewards)", zap.Error(err), zap.Stringer("taskID", tr.Id))
+	}
+
+	ic.logger.Debug("Finished get rewards operation", zap.Stringer("taskID", tr.Id))
 }
 
 // sendResp constructs protocol response and send it out to transport

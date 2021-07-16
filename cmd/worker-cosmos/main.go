@@ -122,10 +122,20 @@ func main() {
 		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
 	})
 
-	storeEndpoints := strings.Split(cfg.StoreHTTPEndpoints, ",")
-	hStore := httpStore.NewHTTPStore(storeEndpoints, &http.Client{})
+	// Initialize client for search and rewards services
+	searchEndpoints := strings.Split(cfg.SearchHTTPEndpoints, ",")
+	rewardsEndpoints := strings.Split(cfg.RewardsHTTPEndpoints, ",")
+	hStore := httpStore.NewHTTPStore(searchEndpoints, rewardsEndpoints, &http.Client{})
+
 	grpcServer := grpc.NewServer()
-	workerClient := client.NewIndexerClient(ctx, logger.GetLogger(), apiClient, hStore, uint64(cfg.MaximumHeightsToGet))
+	workerClient := client.NewIndexerClient(
+		ctx,
+		logger.GetLogger(),
+		apiClient,
+		hStore,
+		uint64(cfg.MaximumHeightsToGet),
+		cfg.ChainID,
+	)
 	worker := grpcIndexer.NewIndexerServer(ctx, workerClient, logger.GetLogger())
 	grpcProtoIndexer.RegisterIndexerServiceServer(grpcServer, worker)
 
