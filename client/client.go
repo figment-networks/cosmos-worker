@@ -51,7 +51,7 @@ type IndexerClient struct {
 	streams map[uuid.UUID]*cStructs.StreamAccess
 	sLock   sync.Mutex
 
-	storeClient store.SearchStoreCaller
+	storeClient store.StoreCaller
 
 	Reqester *ranged.RangeRequester
 

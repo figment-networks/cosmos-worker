@@ -34,7 +34,10 @@ type Config struct {
 	ManagerInterval time.Duration `json:"manager_interval" envconfig:"MANAGER_INTERVAL" default:"10s"`
 	Hostname        string        `json:"hostname" envconfig:"HOSTNAME"`
 
-	StoreHTTPEndpoints string `json:"store_http_endpoints" envconfig:"STORE_HTTP_ENDPOINTS"`
+	// SearchHTTPEndpoints is a comma separated list of indexer-search instance addresses.
+	SearchHTTPEndpoints string `json:"search_http_endpoints" envconfig:"SEARCH_HTTP_ENDPOINTS"`
+	// RewardsHTTPEndpoints is a comma separated list of indexer-rewards instance addresses.
+	RewardsHTTPEndpoints string `json:"rewards_http_endpoints" envconfig:"REWARDS_HTTP_ENDPOINTS"`
 
 	MaximumHeightsToGet float64 `json:"maximum_heights_to_get" envconfig:"MAXIMUM_HEIGHTS_TO_GET" default:"10000"`
 	RequestsPerSecond   int64   `json:"requests_per_second" envconfig:"REQUESTS_PER_SECOND" default:"33"`

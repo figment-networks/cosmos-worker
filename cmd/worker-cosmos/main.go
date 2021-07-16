@@ -122,8 +122,11 @@ func main() {
 		TimeoutSearchTxCall: cfg.TimeoutTransactionCall,
 	})
 
-	storeEndpoints := strings.Split(cfg.StoreHTTPEndpoints, ",")
-	hStore := httpStore.NewHTTPStore(storeEndpoints, &http.Client{})
+	// Initialize client for search and rewards services
+	searchEndpoints := strings.Split(cfg.SearchHTTPEndpoints, ",")
+	rewardsEndpoints := strings.Split(cfg.RewardsHTTPEndpoints, ",")
+	hStore := httpStore.NewHTTPStore(searchEndpoints, rewardsEndpoints, &http.Client{})
+
 	grpcServer := grpc.NewServer()
 	workerClient := client.NewIndexerClient(
 		ctx,
