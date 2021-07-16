@@ -166,8 +166,8 @@ github.com/felixge/httpsnoop v1.0.1/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSw
 github.com/figment-networks/indexer-manager v0.4.0 h1:TLZcYy/hckhbjDy1rVxNXdwxOjxzmbGhckWZmGdYsCQ=
 github.com/figment-networks/indexer-manager v0.4.0/go.mod h1:UKCL59uzNRAzfVWGNWMtLEsqvMOqQFAXcz/DZxi5fhw=
 github.com/figment-networks/indexing-engine v0.3.2-0.20210603103553-9df604641a66/go.mod h1:UFL9NtFKENN+YAvfZFwd7OqGk8JZHRxgjZkAbhjulME=
-github.com/figment-networks/indexing-engine v0.4.4 h1:G7nTaRAH3/oc7Z/N6rkzQi47CzV0bNrMTsURnJMm4Sg=
-github.com/figment-networks/indexing-engine v0.4.4/go.mod h1:c8uqoruz/wIqh+obBG2QYRm2XLv01AdyoYXPz05yCS0=
+github.com/figment-networks/indexing-engine v0.5.0 h1:VDPD8MvQHaMFILw/4r4p6PsUeDC9jUZrzWZF/2t9hNM=
+github.com/figment-networks/indexing-engine v0.5.0/go.mod h1:c8uqoruz/wIqh+obBG2QYRm2XLv01AdyoYXPz05yCS0=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
