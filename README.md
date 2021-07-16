@@ -92,3 +92,7 @@ List of currently supported ibc transaction types in cosmos-worker are (listed b
     `transfer`
 - internal:
     `error`
+
+List of currently supported tendermint transaction types in cosmos-worker are (listed by modules):
+- liquidity:
+    `create_pool` , `deposit_within_batch`, `withdraw_within_batch`, `swap_within_batch`
