@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 	"github.com/tendermint/tendermint/libs/bytes"
 	"google.golang.org/grpc"
 )

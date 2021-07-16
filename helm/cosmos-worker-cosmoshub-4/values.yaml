@@ -1,0 +1,57 @@
+global:
+  labels:
+    team: indexers
+    severity: critical
+  annotations:
+    figment.io/github_repository: github.com/figment-networks/cosmos-worker
+  env:
+    COSMOS_GRPC_ADDR: 144.217.252.148:9090
+    CHAIN_ID: cosmoshub-4
+    HOSTNAME:
+      fieldRef:
+        fieldPath: status.podIP
+    PORT: 3000
+    MANAGERS: indexer-manager.indexers.svc.cluster.local:8085
+    REQUESTS_PER_SECOND: 200
+    TIMEOUT_TRANSACTION_CALL: 30s
+    TIMEOUT_BLOCK_CALL: 30s
+    STORE_HTTP_ENDPOINTS: http://indexer-search.indexers.svc.cluster.local:8986/input/jsonrpc
+    HEALTH_CHECK_INTERVAL: 10s
+    ROLLBAR_ENV: production
+    ROLLBAR_SERVER_ROOT: github.com/figment-networks/cosmos-worker
+    ROLLBAR_ACCESS_TOKEN:
+      secretsManagerKeyRef:
+        key: prod/indexers/common
+        property: rollbar_token
+deployments:
+  cosmos-worker-cosmoshub-4:
+    service:
+      ports:
+        http:
+          port: 3000
+          targetPort: 3000
+          protocol: TCP
+        internal:
+          port: 8087
+          targetPort: 8087
+          protocol: TCP
+    replicas: 1
+    pod:
+      containers:
+        indexer-search:
+          command:
+            - /app/worker
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8087
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8087
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi

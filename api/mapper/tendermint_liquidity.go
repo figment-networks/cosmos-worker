@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	shared "github.com/figment-networks/indexer-manager/structs"
+	shared "github.com/figment-networks/indexing-engine/structs"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gogo/protobuf/proto"

@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/figment-networks/indexer-manager/structs"
+	"github.com/figment-networks/indexing-engine/structs"
 )
 
 // GetAccountDelegations fetches account delegations
@@ -28,11 +28,11 @@ func (c *Client) GetAccountDelegations(ctx context.Context, params structs.Heigh
 			structs.Delegation{
 				Delegator: dr.Delegation.DelegatorAddress,
 				Validator: structs.Validator(dr.Delegation.ValidatorAddress),
-				Shares: structs.TransactionAmount{
+				Shares: structs.RewardAmount{
 					Numeric: dr.Delegation.Shares.BigInt(),
 					Exp:     sdk.Precision,
 				},
-				Balance: structs.TransactionAmount{
+				Balance: structs.RewardAmount{
 					Text:     dr.Balance.Amount.String(),
 					Numeric:  dr.Balance.Amount.BigInt(),
 					Currency: dr.Balance.Denom,
