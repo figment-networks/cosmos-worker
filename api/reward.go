@@ -20,9 +20,12 @@ type responseWithHeight struct {
 const maxRetries = 3
 
 // GetReward fetches total rewards for delegator account
-func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (resp structs.GetRewardResponse, err error) {
+func (c *Client) GetReward(
+	ctx context.Context,
+	params structs.HeightAccount,
+	chainID string,
+) (resp structs.GetUnclaimedRewardResponse, err error) {
 	resp.Height = params.Height
-	resp.Rewards = make(map[structs.Validator][]structs.RewardAmount, 0)
 
 	valResp, err := c.distributionClient.DelegatorValidators(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
 		&types.QueryDelegatorValidatorsRequest{DelegatorAddress: params.Account})
@@ -30,6 +33,9 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 		return resp, fmt.Errorf("[COSMOS-API] Error fetching validators: %w", err)
 	}
 
+	resp.UnclaimedRewards = make([]structs.UnclaimedReward, 0, len(valResp.Validators))
+
+	// get rewards delegator earned from each of its validators
 	for _, val := range valResp.Validators {
 		delResp, err := c.distributionClient.DelegationRewards(metadata.AppendToOutgoingContext(ctx, grpctypes.GRPCBlockHeightHeader, strconv.FormatUint(params.Height, 10)),
 			&types.QueryDelegationRewardsRequest{DelegatorAddress: params.Account, ValidatorAddress: val})
@@ -37,8 +43,11 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 			return resp, fmt.Errorf("[COSMOS-API] Error fetching delegation rewards: %w", err)
 		}
 
-		valRewards := make([]structs.RewardAmount, 0, len(delResp.GetRewards()))
-		for _, reward := range delResp.GetRewards() {
+		delRewards := delResp.GetRewards()
+
+		// translate each amount to RewardAmount
+		valRewards := make([]structs.RewardAmount, 0, len(delRewards))
+		for _, reward := range delRewards {
 			valRewards = append(valRewards,
 				structs.RewardAmount{
 					Text:     reward.Amount.String(),
@@ -49,7 +58,16 @@ func (c *Client) GetReward(ctx context.Context, params structs.HeightAccount) (r
 			)
 		}
 
-		resp.Rewards[structs.Validator(val)] = valRewards
+		reward := structs.UnclaimedReward{
+			Account:         params.Account,
+			ChainID:         chainID,
+			Height:          params.Height,
+			Network:         "cosmos",
+			UnclaimedReward: valRewards,
+			Validator:       val,
+		}
+
+		resp.UnclaimedRewards = append(resp.UnclaimedRewards, reward)
 	}
 
 	return resp, err
